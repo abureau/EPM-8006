@@ -1,0 +1,196 @@
+---
+title: "Solution de la série d'exercices 3"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+```{r}
+library(geepack)
+library(mice)
+library(tableone)
+```
+
+# Lecture des données
+```{r}
+ccs = read.csv("ccs.csv")
+```
+
+## Comparaison des sujets avec un bon et un mauvais statut de santé physique
+```{r}
+tabhealth = CreateTableOne(data=ccs,vars=c("single","pextern","textern"),factorVars =c("health","single","pextern","textern"),strata="health")
+tabhealth
+```
+Modeste association de l'état de santé avec le statut monoparental de la famille, il y a donc possiblement un effet confondant du statut monoparental sur l'association entre état de santé et trouble externalisant.
+
+# Création d'un poids inversement proportionel à la probabilité d'être en mauvaise santé
+On peut le créer avant de traiter les réponses manquantes car il implique seulement l'exposition et la covariable
+```{r}
+psante = prop.table(table(ccs$health,ccs$single),2)
+psante
+```
+Création du poids
+```{r}
+prob.ms = ifelse(ccs$single==1,psante[2,2],psante[2,1])
+ccs$ipw = ifelse(ccs$health==1,1/prob.ms,1/(1-prob.ms))
+ccs$nipw = ccs$ipw/mean(ccs$ipw)
+table(ccs$nipw)
+```
+
+
+# Examen des valeurs manquantes
+
+Définition d'un indicateur de données complètes
+```{r}
+ccs$R = !is.na(ccs$textern)
+table(ccs$R)
+prop.table(table(ccs$R))
+```
+
+## Comparaison des sujets avec et sans observation de l'enseignant
+
+```{r}
+tabmiss = CreateTableOne(data=ccs,vars=c("health","single","pextern"),factorVars =c("health","single","pextern"),strata="R")
+tabmiss
+```
+## Modèle de données complètes vs. manquantes
+```{r}
+enseignant.manque.fit = glm(R~pextern*health*single,data=ccs,family=binomial)
+summary(enseignant.manque.fit)
+null.fit = glm(R~1,data=ccs,family=binomial)
+anova(null.fit,enseignant.manque.fit,test="Chi")
+```
+On a des indications que le fait d'avoir une observation de l'enseignant dépend de variable observées, ce qui suggère d'implanter une approche d'estimation sous l'hypothèse de données manquantes aléatoirement (MAR) et non manquantes complètement aléatoirement (MCAR).
+
+# Imputation multiple
+
+On prend 43 imputations étant donné la portion importante d'observations avec des données manquantes (43%)
+```{r,results==FALSE}
+ccs$textern = factor(ccs$textern)
+ccs_imp=mice(data=ccs,m=43,method="logreg",formulas=list(textern~pextern*health*single),seed=98)
+```
+# Estimation d'un rapport de prévalence ajusté
+```{r}
+logbin.imp = glm.mids(textern~health+single,data=ccs_imp,family=binomial(link="log"))
+```
+```{r}
+logbin.res = pool(logbin.imp)
+logbin.res
+```
+Affichage des tests de Wald
+```{r}
+logbin.resume = summary(logbin.res)
+logbin.resume
+```
+
+Affichage des RPs et leur intervalle de confiance
+```{r}
+RP = signif(exp(cbind(logbin.resume$estimate,logbin.resume$estimate-qnorm(0.975)*logbin.resume$std.error,logbin.resume$estimate+qnorm(0.975)*logbin.resume$std.error)),3)
+dimnames(RP)[[1]] = dimnames(logbin.resume)[[1]]
+RP
+```
+## Approche alternative avec un modèle log-linéaire robuste basé sur équations d'estimation de Poisson 
+```{r}
+logbin_rob.imp = with(ccs_imp,geeglm(as.numeric(as.character(textern))~health+single,family=poisson(link="log"),id=CID,scale.fix=T))
+```
+
+```{r}
+logbin_rob.res = pool(logbin_rob.imp)
+logbin_rob.res
+```
+Affichage des tests de Wald
+```{r}
+logbin_rob.resume = summary(logbin_rob.res)
+logbin_rob.resume
+```
+Les estimations des coefficients et de leurs erreurs-types sont essentiellement identiques à celles du maximum de vraisemblance.
+
+# Estimation d'un rapport de cote marginal ajusté par probabilité inverse d'être en mauvaise santé
+```{r}
+RC.imp = with(ccs_imp,geeglm(as.numeric(as.character(textern))~health,family=binomial,weight=nipw,id=CID,scale.fix=T))
+```
+```{r}
+RC.res = pool(RC.imp)
+RC.res
+```
+Affichage des tests de Wald
+```{r}
+RC.resume = summary(RC.res)
+RC.resume
+```
+Affichage du RC et son intervalle de confiance
+```{r}
+RC = signif(exp(cbind(RC.resume$estimate,RC.resume$estimate-qnorm(0.975)*RC.resume$std.error,RC.resume$estimate+qnorm(0.975)*RC.resume$std.error)),3)
+dimnames(RC)[[1]] = dimnames(RC.resume)[[1]]
+RC
+```
+## Alternative au calcul du RC brut avec les fonctions du module MatchThem
+```{r}
+library(MatchThem)
+weight_imp <- weightthem(health ~ single, data = ccs_imp, approach = "within", method = "ps")
+```
+```{r}
+library(survey)
+weight_model <- with(weight_imp, svyglm(textern ~ health, family = binomial()))
+```
+```{r}
+weight_results <- pool(weight_model) 
+summary_results <- summary(weight_results, conf.int = TRUE) 
+summary_results
+```
+
+
+Pour juger de la confondance par le statut monoparental de la famille, on compare avec l'estimation brute (sans pondération).
+
+```{r}
+RC_brut.imp = with(ccs_imp,glm(as.numeric(as.character(textern))~health,family=binomial))
+```
+
+```{r}
+RC_brut.res = pool(RC_brut.imp)
+RC_brut.res
+```
+Affichage des tests de Wald
+```{r}
+RC_brut.resume = summary(RC_brut.res)
+RC_brut.resume
+```
+Affichage du RC et son intervalle de confiance
+```{r}
+RC_brut = signif(exp(base::cbind(RC_brut.resume$estimate,RC_brut.resume$estimate-qnorm(0.975)*RC_brut.resume$std.error,RC_brut.resume$estimate+qnorm(0.975)*RC_brut.resume$std.error)),3)
+dimnames(RC_brut)[[1]] = dimnames(RC_brut.resume)[[1]]
+RC_brut
+```
+
+L'effet confondant est minime (RC passe de 1,20 à 1,18 quand on ajuste pour le statut monoparental).
+
+## Approche de Cain et Breslow
+```{r}
+tab = xtabs(~health+pextern+single,data=ccs)
+```
+
+Il faut renverser les rôles des variables de santé et de trouble externalisé. La variable santé définit les cas et les témoins.
+```{r}
+nn0 = as.vector(tab[1,,])
+nn1 = as.vector(tab[2,,])
+nn0
+nn1
+```
+Programmation d'une variable indiquant la modalité des variables évaluation des parents et statut monoparental.
+```{r}
+ccs_comp = ccs[complete.cases(ccs),]
+gr = 2*ccs_comp$single + ccs_comp$pextern + 1
+```
+
+Estimation du RC brut
+```{r}
+library(osDesign)
+RC_brut.pl = tps(health~textern,data=ccs_comp,nn0=nn0,nn1=nn1,group=gr,method="PL",cohort=TRUE)
+RC_brut.pl.resume = summary(RC_brut.pl)
+RC_brut.pl.resume
+```
+Affichage des RCs et leur intervalle de confiance
+```{r}
+RC_brut.pl.coef = RC_brut.pl.resume$coefficients
+exp(base::cbind(RC_brut.pl.coef[,"Value"],RC_brut.pl.coef[,"Value"]-qnorm(0.975)*RC_brut.pl.coef[,"Emp SE"],RC_brut.pl.coef[,"Value"]+qnorm(0.975)*RC_brut.pl.coef[,"Emp SE"]))
+```
+

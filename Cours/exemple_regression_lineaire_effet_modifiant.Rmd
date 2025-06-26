@@ -1,0 +1,41 @@
+---
+title: "Effet modifiant en régression linéaire"
+output: html_notebook
+---
+
+#Importation des données de fram1
+
+```{r}
+fram1 = read.csv(file.choose())
+```
+
+#Calcul de la moyenne de la tension systolique par sexe et statut tabagique
+```{r}
+tab = tapply(fram1$SYSBP,list(fram1$SEX,fram1$CURSMOKE),mean)
+dimnames(tab) = list(c("femmes","hommes"),c("non-fumeur","fumeur"))
+tab
+```
+# Estimation du modèle de régression linéaire:
+
+```{r}
+modA = lm(SYSBP~SEX*CURSMOKE+AGE+BMI+DIABETES,data=fram1)
+summary(modA)
+```
+# Estimation des contrastes avec tests d'hypothèses et intervalles de confiance
+
+Ces estimations permettent de remplir le tableau de la diapo 38 du cours 2.
+
+Différence entre les hommes fumeurs et les femmes non-fumeuses:
+```{r}
+library(multcomp)
+fumd = glht(modA,linfct=c("CURSMOKE + SEX + SEX:CURSMOKE = 0"))
+summary(fumd)
+confint(fumd)
+```
+Différence entre les hommes fumeurs et les hommes non-fumeurs:
+```{r}
+library(multcomp)
+fumh = glht(modA,linfct=c("CURSMOKE + SEX:CURSMOKE = 0"))
+summary(fumh)
+confint(fumh)
+```

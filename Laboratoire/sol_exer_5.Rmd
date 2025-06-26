@@ -1,0 +1,79 @@
+---
+title: "Solution exercice 5.2"
+output: html_notebook
+---
+
+#Importation des données
+
+Il faut préciser que les données manquantes sont codées par des "." avec l'option na.strings
+```{r}
+osteo = read.csv("osteo5.csv",na.strings=".")
+```
+ou
+```{r}
+osteo = read.csv(file.choose(),na.strings=".")
+```
+
+## Valeurs manquantes de la réponse
+```{r}
+table(is.na(osteo$OSQ010A))
+```
+
+# Imputation multiple
+J'utilise l'imputation MICE étant donné que mes variables sont de différents types;
+
+Pour utiliser la régression logistique dans la fonction *mice* il faut que la variable à imputer soit de type *factor*. On demande de ne pas imputer la variable réponse OSQ010A en spécifiant une méthode d'imputation vide.
+```{r}
+library(mice)
+osteo$OSQ010A=factor(osteo$OSQ010A,levels=2:1)
+osteo$OSQ170=factor(osteo$OSQ170,levels=2:1)
+osteo$OSQ200=factor(osteo$OSQ200,levels=2:1)
+osteo$RIAGENDR=factor(osteo$RIAGENDR,levels=2:1)
+osteo$RIDRETH1=factor(osteo$RIDRETH1)
+osteo$ALQ101=factor(osteo$ALQ101,levels=2:1)
+osteo$OSQ130=factor(osteo$OSQ130,levels=2:1)
+set.seed(190)
+impexer5=mice(data=osteo[,c("OSQ130","OSQ170","OSQ200","RIAGENDR","RIDRETH1","RIDAGEYR","BMXBMI","ALQ101","OSQ010A")],m=20,method=c("logreg","logreg","logreg","logreg","polyreg","pmm","pmm","logreg",""),seed=98)
+```
+
+# Affichage des paramètres d'imputation
+Les variables sans méthode d'imputation n'ont pas de valeur manquante ou on a demandé de ne pas les imputer (OSQ010A).
+```{r}
+impexer5
+```
+
+
+# Analyse des jeux de données imputés
+On modélise la cote de fracture de la hanche (OSQ010A)
+```{r}
+osteo.exer5.multi = with(impexer5,exp=glm(OSQ010A~ALQ101+OSQ130+OSQ170+OSQ200+BMXBMI+RIAGENDR+RIDAGEYR+RIDRETH1 ,family=binomial()))
+osteo.exer5.multi
+```
+# Combiner les résultats
+```{r}
+osteo.exer5 = pool(osteo.exer5.multi)
+osteo.exer5
+```
+
+Affichage des tests de Wald
+```{r}
+osteo.exer5.resume = summary(osteo.exer5)
+osteo.exer5.resume
+```
+Il faut programmer soi-même l'affichage des estimations de rapports de cote et leur intervalle de confiance.
+```{r}
+RC = signif(exp(cbind(osteo.exer5.resume$estimate,osteo.exer5.resume$estimate-qnorm(0.975)*osteo.exer5.resume$std.error,osteo.exer5.resume$estimate+qnorm(0.975)*osteo.exer5.resume$std.error)),3)
+dimnames(RC)[[1]] = dimnames(osteo.exer5.resume)[[1]]
+RC
+```
+
+RC = exp(-0.40) = 0.67
+IC =  (0.37, 1.20);
+La consommation d'alcool semble associée à une réduction du
+risque de fracture de la hanche. La nature transversale des données et
+le risque de confusion résiduelle empêche d'interpréter causalement
+cette association. Par ailleurs, une consommation de 12 boissons alcoolisées
+au cours d'une année n'est pas une consommation extrême. Il est donc possible
+que des consommations modérées avec un effet neutre ou même positif soient
+combinées avec des consommations élevées ayant un effet négatif dans la 
+variable d'exposition utilisée.

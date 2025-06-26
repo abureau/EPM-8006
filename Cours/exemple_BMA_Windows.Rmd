@@ -1,0 +1,29 @@
+---
+title: "Modèle prédictif Bayesien"
+output: html_notebook
+---
+
+#Importation des données
+
+```{r}
+fram12 = read.csv(file.choose())
+```
+#Charger le package BACprior
+```{r}
+require(BMA);
+```
+
+# Algorithme BAC
+
+Attention! Un peu long à exécuter! *OR* représente le ratio maximum pour exclure un modèle.
+```{r}
+resultats = bicreg(y = fram12$SYSBP2, x = fram12[,2:19], OR = 15);
+summary(resultats);
+```
+
+# Prédiction, avec erreur tenant compte de la sélection de modèles
+```{r}
+predBMA = predict(resultats,newdata=fram12)
+with(predBMA,data.frame(mean,sd))[1:10,]
+```
+

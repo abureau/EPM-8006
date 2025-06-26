@@ -1,0 +1,171 @@
+---
+title: "Exemple de sélection de modèle en contexte causal"
+output: html_notebook
+---
+#Importation des données
+
+```{r}
+fram1 = read.csv(file.choose())
+```
+#Quelques statistiques descriptives
+```{r}
+summary(fram1[,c("AGE","SYSBP","DIABP","BMI","CIGPDAY")])
+tabsex = table(fram1$SEX)
+cbind(tabsex,prop.table(tabsex))
+tabfum = table(fram1$CURSMOKE)
+cbind(tabfum,prop.table(tabfum))
+tabdiabetes = table(fram1$DIABETES)
+cbind(tabdiabetes,prop.table(tabdiabetes))
+```
+On remarque des valeurs douteuses pour la SBP. En pratique, il est important de bien vérifier immédiatement s'il n'y aurait pas des erreurs dans le jeu de données. Par exemple, en étudiant davantage les données extrêmes découvertes. On peut aussi faire certaines vérifications logiques, par exemple que cursmoke = 0 si
+cigpday = 0.
+```{r}
+tapply(fram1$CIGPDAY,fram1$CURSMOKE,mean,na.rm=T)
+```
+#Stratégie d'analyse
+
+On veut estimer l'effet du tabagisme sur la pression artérielle systolique.
+Puisqu'on dispose de données transversales, la tâche est plus difficile.
+On essaie de choisir les variables d'ajustement autant que possible en se basant
+sur nos connaissances du domaine d'application. Si on ne dispose pas de connaissances
+suffisantes pour construire un DAG complet, VanderWeele et Shpitser (2011) suggèrent
+d'ajuster pour toutes les variables qui sont soient une cause de l'exposition, soit une
+cause de l'issue (et qui ne sont pas des effets de l'exposition !).
+
+J'ajuste pour l'âge, le sexe, l'IMC. Je n'ajuste pas pour la DBP qui est probablement
+influencée par le tabagisme. Pour le statut diabétique, la situation est plus compliquée.
+L'hypertension peut mener au ou aggraver les symptômes du diabète. Parallèlement, le diabète
+pourrait causer de l'hypertension en raison des dommages causés aux artères par le diabète. 
+Je décide d'ajuster pour le diabète, mais à titre d'étude de sensibilité, il serait bien
+d'également présenter un modèle sans ajustement pour le diabète. 
+
+Je dois également décider de la façon dont j'entre les variables dans le modèle. 
+Pour l'exposition, j'introduis à la fois les variables cursmoke et cigpday 
+(l'exposition sera représentée par deux variables). J'entre les variables
+AGE, BMI et CIGPDAY de façon linéaire pour simplifier. Si l'hypothèse de linéarité
+n'est pas respectée, j'apporterai les correctifs nécessaires. Les variables indicatrices (0/1) 
+des variables SEX, CURSMOKE et DIABETES seront entrées dans le modèle. Je n'inclus pas de 
+variables d'interaction. Toutefois, remarquons que pour le tabagisme, il y a une relation
+spéciale entre les deux variables (CIGPDAY = 0 <=> cursomke = 0).
+
+#Quelques statistiques descriptives en fonction du statut d'exposition
+Dans un contexte causal, il est généralement recommandé de présenter des statistiques
+descriptives en fonction du statut d'exposition.
+(Moyenne + SD ou nombre + % selon le type de variable).
+Ce genre de tableau nous donne un indice de l'importance des variables
+potentiellement confondantes identifiées.
+
+Ces statistiques descriptives pourraient aussi me montrer que certaines catégories de
+variables catégoriques auraient des effectifs trop petits, ce qui pourrait m'inciter
+à combiner ensemble des catégories adjacentes.
+```{r}
+library(furniture)
+table1(fram1,AGE,SYSBP,BMI,splitby = ~CURSMOKE)
+```
+Pour les variables nominales, on peut obtenir des tableaux avec les fonctions de base de R
+```{r}
+tab=table(fram1$CURSMOKE,fram1$SEX)
+cbind(tab,rbind(prop.table(tab[1,]),
+prop.table(tab[2,])))
+tab=table(fram1$CURSMOKE,fram1$DIABETES)
+cbind(tab,rbind(prop.table(tab[1,]),
+prop.table(tab[2,])))
+```
+Ou on peut utiliser la fonction *epitab* du module *epitools*. Notez que vous obtiendrez alors une mesure de l'association entre l'exposition et les variables potentiellement confondantes (rapport de cote par défaut) et des tests statistiques qu'il n'est pas recommandé de rapporter dans un tableau 1.
+```{r}
+library(epitools)
+epitab(fram1$CURSMOKE,fram1$SEX)
+epitab(fram1$CURSMOKE,fram1$DIABETES)
+```
+# Estimation du modèle
+J'ajuste le modèle de régression linéaire et je fais sortir différents graphiques pour vérifier les hypothèses du modèle.
+```{r}
+mcomplet = lm(SYSBP~CURSMOKE+CIGPDAY+SEX+AGE+BMI+DIABETES,data=fram1)
+plot(mcomplet,which=1:5)
+```
+
+1. Linéarité: à vérifier uniquement pour les variables dont on suppose dans le modèle que l'effet est linéaire (ici: CIGPDAY, AGE et BMI). Pour faire des graphiques en fonction de chaque prédicteur, il faut extraire les residus standardisés (on ne retrouve pas l'expression "studentized" en R). 
+```{r}
+library(MASS)
+sr = stdres(mcomplet)
+plot(fram1$CIGPDAY,sr)
+lines(lowess(fram1$CIGPDAY,sr),col="red")
+abline(h=0)
+```
+Aucune tendance résiduelle, hypothèse semble respectée.
+
+```{r}
+plot(fram1$AGE,sr)
+lines(lowess(fram1$AGE,sr),col="red")
+abline(h=0)
+```
+
+Aucune tendance résiduelle, hypothèse semble respectée.
+(Par contre, on voit une forme d'entonoir qui pourrait être
+un signe d'hétéroscédasticité.)
+
+```{r}
+plot(fram1$BMI,sr)
+lines(lowess(fram1$BMI,sr),col="red")
+abline(h=0)
+```
+On constate une légère tendance aux deux extrêmes qui
+pourrait être causée par des valeurs extrêmes d'IMC.
+
+2. Indépendance: Selon nos connaissances du contexte de 
+l'étude, il s'agirait d'observations indépendantes.
+
+3. Homoscédasticité : Nous avons déjà constaté un problème pour âge.
+Pour les variables cigpday et bmi, il ne semblait pas y avoir de problème. Il semble y avoir une certaine forme d'entonnoir sur le graphique des résidus vs. les valeurs prédites.
+
+4. Normalité : Pas vraiment pertinent dans notre cas, car n est
+assez grand. Il y a une légère déviation par rapport à la droite attendue sur le diagramme quantile-quantile.
+
+5. Tous les VIFs sont < 10, il ne semble donc pas y avoir de problème de
+multicollinéarité.
+```{r}
+library(mctest)
+imcdiag(mcomplet)
+```
+6. Données influentes ou aberrantes: dans notre contexte, on
+s'intéresse à l'influence sur les paramètres associés à l'exposition. 
+```{r}
+dfb = dfbetas(mcomplet);
+head(dfb, 1);
+round(summary(dfb[,2]), 2);
+round(summary(dfb[,3]), 2);
+```
+OK, pas de valeurs < -0.2 ou > 0.2
+
+En somme, le problème principal semble être l'hétéroscédasticité.
+On pourrait considérer une transformation de la variable SYSBP. Une telle
+transformation va cependant rendre les résultats plus difficiles à interpréter.
+L'autre possibilité est d'utiliser un estimateur robuste :
+
+```{r}
+library(sandwich)
+ET.robuste = sqrt(diag(sandwich(mcomplet)))
+cbind("coef"=coef(mcomplet),"ET robuste"=ET.robuste,"borne inf 95%" = coef(mcomplet) - qnorm(0.975)*ET.robuste,"borne sup 95%" = coef(mcomplet) + qnorm(0.975)*ET.robuste)
+```
+Malheureusement, la fonction *sandwich* ne s'applique pas à combinaisons de paramètres obtenues avec la fonction *glht*.
+
+# Transformation
+
+Appliquons une transformation logarithmique à SYSBP et réestimons le modèle:
+```{r}
+fram1$logSYSBP = log(fram1$SYSBP)
+mlogcomplet = lm(logSYSBP~CURSMOKE+CIGPDAY+SEX+AGE+BMI+DIABETES,data=fram1)
+plot(mlogcomplet,which=1:5)
+```
+
+Après une modification au modèle, il faudrait revérifier les hypothèses pour ce nouveau modèle.
+Les hypothèses semblent beaucoup mieux respectées.
+Pour IMC, on semble voir une légère tendance quadratique (non présenté), mais qui pourrait
+possiblement être attribuable à des valeurs extrêmes d'IMC.
+
+On estime les moyennes de l'effet de différents nombres de cigarettes fumées sur le log SYSBP. Notez qu'il faut retransformer ces valeurs à l'échelle originale pour les interpréter comme des rapports.
+```{r}
+library(multcomp)
+logncig = glht(mlogcomplet,linfct=c("CURSMOKE + CIGPDAY=0","CURSMOKE + 10*CIGPDAY=0","CURSMOKE + 20*CIGPDAY=0"))
+exp(confint(logncig)$confint)
+```

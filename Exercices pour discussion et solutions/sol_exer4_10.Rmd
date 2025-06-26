@@ -1,0 +1,45 @@
+---
+title: "Exemple de solution exercice 4.10"
+output: html_notebook
+---
+
+# Lecture des données
+```{r}
+chp11 = read.csv(file.choose())
+```
+Vérification que l'importation s'est bien déroulée
+```{r}
+str(chp11)
+```
+# On se restreint aux observations complètes
+
+```{r}
+nrow(chp11)
+chp11c = chp11[,c("PDSE", "fume","PDSM", "TAILLE", "AG")]
+chp11c = chp11c[complete.cases(chp11c),]
+nrow(chp11c)
+```
+
+# Définition de la variable réponse
+```{r}
+chp11c$y = cut(chp11c$PDSE,breaks=c(0,2500,3000,10000))
+table(chp11c$y)
+```
+
+# Estimation des modèles bruts et ajustés
+```{r}
+library(MASS)
+model1 <- polr(y ~ fume,data=chp11c)
+model1
+model2 <- polr(y ~ fume + PDSM + TAILLE + AG,data=chp11c)
+model2
+```
+Pour faciliter l'interprétation, on prend le RC pour être dans une catégorie plus basse
+```{r}
+exp(-c(coef(model1),confint(model1)))
+exp(-cbind(coef(model2),confint(model2)))
+```
+
+En ajustant pour tous les facteurs (AGE, TAILLE et PDSM) , le rapport de cotes est de 2,97 avec un intervalle de confiance à 95% de [2,23   -  3,94]. Sans ajustement, le rapport de cotes est de 3,00 avec un intervalle de confiance à 95% de [2,28   -  3,97]. Si on admet que les naissances dans les deux tranches de poids les plus bas sont rares, alors tout changement du RC serait dû aux facteurs de confusion. On voit ici que l'âge, la taille et le poids de la mère ne confondent pas le RC.
+
+À partir de ce modèle, on conclut que « pour tout seuil choisi de poids à la naissance sur cette échelle ordinale,  la cote des risques d’avoir un bébé d’un poids inférieur à ce seuil est 3 fois plus grande chez les mères fumeuses que chez les mères non fumeuses ».

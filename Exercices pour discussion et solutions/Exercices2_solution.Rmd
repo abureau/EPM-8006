@@ -1,0 +1,59 @@
+---
+title: "effets de variants génétiques des gènes GSK3B et FXR1 sur le diagnostic psychiatrique"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+# Lecture des données
+```{r}
+GSK3B_FXR1_diag = read.table("/Users/alexandrebureau/Documents/MonTravail/GSK3B-FXR1/GSK3B_FXR1_diag.txt",header=T)
+```
+
+On s'assure que les NAARs sont la catégorie de référence
+```{r}
+GSK3B_FXR1_diag$diagref = relevel(factor(GSK3B_FXR1_diag$diag),ref="NAARs")
+```
+# Question 3 a)
+## Estimation du modèle
+```{r}
+library(nnet)
+pacman::p_load(tidyverse,gt,gtsummary,kableExtra)
+```
+```{r}
+diag.mod = multinom(diagref~GSK3B*FXR1,weights = n,data=GSK3B_FXR1_diag)
+diag.resume = summary(diag.mod)
+diag.resume
+```
+
+## Présentation des effets stratifiés dans un tableau
+```{r}
+c.GSK3BcFXR1A = coef(diag.mod)[,2]+coef(diag.mod)[,4]
+c.GSK3BcFXR1GG = coef(diag.mod)[,2]
+vdiag = vcov(diag.mod)
+tab=cbind(exp(cbind(c.GSK3BcFXR1GG,c.GSK3BcFXR1GG-qnorm(0.975)*diag.resume$standard.errors[,2],c.GSK3BcFXR1GG+qnorm(0.975)*diag.resume$standard.errors[,2])),
+exp(cbind(c.GSK3BcFXR1A,c.GSK3BcFXR1A-qnorm(0.975)*sqrt(diag(vdiag[c(2,6,10,14),c(2,6,10,14)]+vdiag[c(4,8,12,16),c(4,8,12,16)]+2*vdiag[c(2,6,10,14),c(4,8,12,16)])),c.GSK3BcFXR1A+qnorm(0.975)*sqrt(diag(vdiag[c(2,6,10,14),c(2,6,10,14)]+vdiag[c(4,8,12,16),c(4,8,12,16)]+2*vdiag[c(2,6,10,14),c(4,8,12,16)]))))) 
+dimnames(tab)[[2]] = c("FXR1","GG","","FXR1","A","")
+rbind(c("RC","(IC","95%)","RC","(IC","95%)"),signif(tab,3)) %>% kable(format = "markdown")
+```
+On constate que le rapport de cote (RC) de dépression majeure récurrente (RMDD) comparé aux non-atteints (NAARs) pour une copie additionnelle de l'allèle T de GSK3B est beaucoup plus faible chez les porteurs de l'allèle A de FXR1 que chez les non porteurs. On note aussi des RCs un peu plus élevés de schizophrénie (SZ) et trouble schizo-affectifs (SZA) bien qu'on ne puisse pas rejeter que ces RCs égalent 1. 
+
+# Test du rapport de vraisemblance
+```{r}
+diag.mod2 = multinom(diagref~GSK3B+FXR1,weights = n,data=GSK3B_FXR1_diag)
+anova(diag.mod,diag.mod2)
+```
+
+On rejette l'hypothèse nulle que les 4 coefficients du terme d'interaction soient égaux à 0 (p = 0.008).
+
+# Question 3 b)
+## rapport de cote entre les diagnostics SZ et RMDD pour une copie additionnelle de l’allèle T du gène GSK3B chez les porteurs de l’allèle A du gène FXR1
+
+\[
+\exp(\beta_{SZ1} + \beta_{SZ3} - (\beta_{RMMD1} - \beta_{RMMD3}))
+\]
+```{r}
+coef.mat = coef(diag.mod)
+exp(sum(coef.mat[3,c(2,4)]) - sum(coef.mat[2,c(2,4)]))
+```
+

@@ -1,0 +1,59 @@
+---
+title: "Illustrer données longitudinales"
+output: html_notebook
+---
+
+# Lecture des données
+
+```{r}
+seizure = read.table("seizure.data", header = F);
+colnames(seizure) = c("ID", "Counts", "Visit", "TX", "Age", "Weeks");
+head(seizure);
+```
+
+On vérifie que tout les sujets sont présents à toutes les visites
+```{r}
+table(seizure$Visit)
+```
+
+# Graphique "spaghetti" pour 10 sujets
+
+Échantillonnage de 10 sujets
+```{r}
+set.seed(4317870);
+ids = unique(seizure$ID);
+samp = sample(ids, 10);
+```
+
+Production du graphique
+```{r}
+interaction.plot(seizure$Visit[seizure$ID %in% samp], 
+		    seizure$ID[seizure$ID %in% samp], 
+		    seizure$Counts[seizure$ID %in% samp], type = "l", legend = F,
+		    xlab = "Visite",
+		    ylab = "Nombre de crises");
+```
+# Graphique de moyenne dans chaque groupe
+
+Production du graphique en excluant la visite 0.
+```{r}
+interaction.plot(seizure$Visit[seizure$Visit != 0], 
+		    seizure$TX[seizure$Visit != 0], 
+		    seizure$Counts[seizure$Visit != 0], type = "l", legend = F,
+		    xlab = "Visite",
+		    ylab = "Nombre de crises", ylim = c(0,10));
+legend(x = 3, y = 6, legend = c("Placebo", "Progabide"), lty = c(2,1));
+```
+# Diagramme de dispersion de paires d'observations
+
+On commence par transformer du format long au format large. Il est utile d'inclure les variables explicatives fixes dans la liste *idvar* pour éviter que ces variables soient dupliquées pour chaque visite dans le format large.
+```{r}
+seizure_large = reshape(seizure,timevar="Visit",idvar=c("ID","Age","TX"),direction="wide")
+head(seizure_large)
+```
+
+Production des diagrammes de dispersion
+```{r}
+pairs(seizure_large[,grep("Counts",names(seizure_large))],upper.panel = NULL)
+```
+

@@ -1,0 +1,207 @@
+---
+title: "Traitement des données manquantes"
+output: html_notebook
+---
+
+#Importation des données
+
+Il faut préciser que les données manquantes sont codées par des "." avec l'option na.strings
+```{r}
+ectopic = read.csv("ectopic_donnees.csv",na.strings=".")
+```
+ou
+```{r}
+ectopic = read.csv(file.choose(),na.strings=".")
+```
+
+Noms des variables
+```{r}
+names(ectopic)
+```
+Dimensions du jeu de données
+```{r}
+dim(ectopic)
+```
+# a) Méthode de la variable indicatrice
+
+Codage de la variable indicatrice
+```{r}
+ectopic.indic = ectopic
+ectopic.indic$r = ifelse(is.na(ectopic.indic$chlamydia),0,1)
+ectopic.indic$chlamydia[is.na(ectopic.indic$chlamydia)] = 0
+```
+## Modèle ajusté pour partenaires sexuels multiples et contraception
+```{r}
+model1.indic = glm(pregnancy~gonnorhoea+contracept+sexpatr+r+r:chlamydia,data=ectopic.indic,family=binomial)
+summary(model1.indic)
+```
+Affichage des rapports de cote avec intervalles de confiance de Wald et tests d'hypothèses
+```{r}
+library(epiDisplay)
+logistic.display(model1.indic,decimal=3)
+```
+## Modèle brut de chlamydia et gonorrhée 
+```{r}
+model2.indic = glm(pregnancy~gonnorhoea+chlamydia,data=ectopic.indic,family=binomial)
+summary(model2.indic)
+```
+Affichage des rapports de cote avec intervalles de confiance de Wald et tests d'hypothèses
+```{r}
+logistic.display(model2.indic,decimal=3)
+```
+
+# b) Méthode de Cain et Breslow
+
+On charge le module *osDesign*.
+
+```{r}
+library(osDesign)
+```
+On retient seulement les sujets de la phase 2 pour l'analyse
+
+```{r}
+ectopic.ech <- ectopic[!is.na(ectopic$chlamydia),]
+dim(ectopic.ech)
+```
+## Modèle ajusté pour partenaires sexuels multiples et contraception
+
+Il faut d'abord créer un tableau du nombre de cas et de témoins dans chaque modalité des variables explicatives incluses dans le modèle de la phase 1
+```{r}
+tab <- xtabs(~pregnancy+gonnorhoea+contracept+sexpatr,data=ectopic)
+```
+Nombre de témoins par strate de la phase 1
+```{r}
+nn0 <- as.vector(tab[1,,,])
+```
+Nombre de cas par strate de la phase 1
+```{r}
+nn1 <- as.vector(tab[2,,,])
+```
+Ici il faut programmer une variable qui indique la modalité des variables gonorrhée, partenaires sexuels multiples et contraception
+```{r}
+gr = 4*ectopic.ech$sexpatr + 2*ectopic.ech$contracept + ectopic.ech$gonnorhoea + 1
+table(gr)
+```
+La fonction *tps* n'accepte pas les strates vides, il faut donc ajuster *nn0*, *nn1* et convertir la variable des modalités gr en un facteur
+```{r}
+nn0 = nn0[nn0>0]
+nn1 = nn1[nn1>0]
+grf=factor(gr)
+levels(grf)
+nn0
+nn1
+```
+Estimation du modèle ajusté incluant les deux expositions gonorrhée et chlamydia
+```{r}
+model1.pl <- tps(pregnancy~gonnorhoea+chlamydia+contracept+sexpatr,data=ectopic.ech,nn0=nn0,nn1=nn1,group=grf,method="PL",cohort=FALSE)
+model1.pl.resume = summary(model1.pl)
+model1.pl.resume$coefficients
+```
+
+Affichage des RCs et leur intervalle de confiance
+```{r}
+model1.pl.coef = model1.pl.resume$coefficients
+exp(cbind(model1.pl.coef[,"Value"],model1.pl.coef[,"Value"]-qnorm(0.975)*model1.pl.coef[,"Emp SE"],model1.pl.coef[,"Value"]+qnorm(0.975)*model1.pl.coef[,"Emp SE"]))
+```
+
+## Modèle brut de chlamydia et gonorrhée 
+Nous ne l'avons pas vu dans le contenu du cours, mais il est possible dans la méthodologie de Cain et Breslow de tenir compte de variables dans la stratification de l'échantillon de la phase 1 qui ne sont pas incluses dans le modèle de la phase 2.On peut passer directement à l'estimation du modèle brut à l'aide de la fonction *tps*.
+```{r}
+model2.pl <- tps(pregnancy~gonnorhoea+chlamydia,data=ectopic.ech,nn0=nn0,nn1=nn1,group=grf,method="PL",cohort=FALSE)
+model2.pl.resume = summary(model2.pl)
+model2.pl.resume$coefficients
+```
+Affichage des RCs et leur intervalle de confiance
+```{r}
+model2.pl.coef = model2.pl.resume$coefficients
+exp(cbind(model2.pl.coef[,"Value"],model2.pl.coef[,"Value"]-qnorm(0.975)*model2.pl.coef[,"Emp SE"],model2.pl.coef[,"Value"]+qnorm(0.975)*model2.pl.coef[,"Emp SE"]))
+```
+
+Évaluation de l'effet confondant
+```{r}
+(exp(model2.pl$coef)[2:3] - exp(model1.pl$coef)[2:3])/exp(model1.pl$coef)[2:3]
+```
+Réduction de plus de 40%
+
+Pour obtenir la même solution que la procédure d'ajustement des coefficients présentée dans le contenu du cours, il faut créer un tableau du nombre de cas et de témoins dans chaque modalité de la variable gonorrhée, la seule incluse dans le modèle de la phase 1
+```{r}
+tab <- table(ectopic$pregnancy,ectopic$gonnorhoea)
+```
+
+Nombre de témoins par strate de la phase 1
+```{r}
+nn0a <- as.vector(tab[1,])
+```
+Nombre de cas par strate de la phase 1
+```{r}
+nn1a <- as.vector(tab[2,])
+```
+```{r}
+model2a.pl <- tps(pregnancy~gonnorhoea+chlamydia,data=ectopic.ech,nn0=nn0a,nn1=nn1a,group=factor(ectopic.ech$gonnorhoea),method="PL",cohort=FALSE)
+model2a.pl.resume = summary(model2a.pl)
+model2a.pl.resume$coefficients
+```
+Affichage des RCs et leur intervalle de confiance
+```{r}
+model2a.pl.coef = model2a.pl.resume$coefficients
+exp(cbind(model2a.pl.coef[,"Value"],model2a.pl.coef[,"Value"]-qnorm(0.975)*model2a.pl.coef[,"Emp SE"],model2a.pl.coef[,"Value"]+qnorm(0.975)*model2a.pl.coef[,"Emp SE"]))
+```
+Évaluation du changement (biais de confusion et sélection combinés)
+```{r}
+(exp(model2a.pl$coef)[2:3] - exp(model1.pl$coef)[2:3])/exp(model1.pl$coef)[2:3]
+```
+Le changement est moins important quand on combine l'effet des bias de confusion et de sélection dû à l'exclusion des variables contraception et partenaires sexuels multiples du modèle.
+
+# c) Imputation multiple
+
+On utilise le module *mice* pour l'imputation multiple par équations en chaîne. Pour utiliser la regression logistique dans la fonction *mice* il faut que la variable à imputer soit de type *factor*. On demande 20 imputations au lieu du défaut de 5.
+```{r}
+library(mice)
+ectopic$chlamydia = factor(ectopic$chlamydia)
+imp = mice(data=ectopic,m=20,method="logreg",formulas=list(chlamydia~pregnancy+gonnorhoea+contracept+sexpatr),seed=89)
+imp
+```
+Ensuite on effectue les analyses.
+
+## Modèle ajusté pour partenaires sexuels multiples et contraception
+```{r}
+model1.imp = glm.mids(pregnancy~gonnorhoea+chlamydia+contracept+sexpatr,data=imp,family=binomial)
+resultats1 = pool(model1.imp)
+resultats1
+```
+Affichage des tests de Wald
+```{r}
+resultats1.resume = summary(resultats1)
+resultats1.resume
+```
+
+Affichage des RCs et leur intervalle de confiance
+```{r}
+RC = signif(exp(cbind(resultats1.resume$estimate,resultats1.resume$estimate-qnorm(0.975)*resultats1.resume$std.error,resultats1.resume$estimate+qnorm(0.975)*resultats1.resume$std.error)),3)
+dimnames(RC)[[1]] = dimnames(resultats1.resume)[[1]]
+RC
+```
+## Modèle brut de chlamydia et gonorrhée 
+
+```{r}
+model2.imp = glm.mids(pregnancy~gonnorhoea+chlamydia,data=imp,family=binomial)
+resultats2 = pool(model2.imp)
+resultats2
+```
+Affichage des tests de Wald
+```{r}
+resultats2.resume = summary(resultats2)
+resultats2.resume
+```
+Affichage des RCs et leur intervalle de confiance
+```{r}
+RC2 = signif(exp(cbind(resultats2.resume$estimate,resultats2.resume$estimate-qnorm(0.975)*resultats2.resume$std.error,resultats2.resume$estimate+qnorm(0.975)*resultats2.resume$std.error)),3)
+dimnames(RC2)[[1]] = dimnames(resultats2.resume)[[1]]
+RC2
+```
+## Évaluation de l'effet confondant
+Cette évaluation correspond à celle avec le modèle 2 de l'approche de Cain et Breslow, dans le sens que l'imputation multiple inclut les variables contraception et partenaires sexuels multiples, il n'y a donc pas de biais de sélection qui viendrait de l'omission de ces variables.
+
+```{r}
+(RC2[2:3,1] - RC[2:3,1])/RC[2:3,1]
+```

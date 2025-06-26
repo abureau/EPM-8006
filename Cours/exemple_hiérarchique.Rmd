@@ -1,0 +1,76 @@
+---
+title: "Modèle hiérarchique"
+output: html_notebook
+---
+
+# Lecture des données
+
+```{r}
+mmec = read.csv("mmec.csv")
+```
+
+# Modèle pour estimer les proportions de variance aux différents niveaux
+
+```{r}
+library(nlme)
+melaLME.intercept = lme(RR~1,random=~1|nation/region,data=mmec)
+summary(melaLME.intercept)
+```
+On extrait les variances:
+```{r}
+melavar = VarCorr(melaLME.intercept)
+melavar
+```
+Pour obtenir la proportion de variance due aux régions et aux pays, on extrait les variances et on fait les calculs
+```{r}
+var.pays = as.numeric(melavar[2,1])
+var.region = as.numeric(melavar[4,1])
+var.resid = as.numeric(melavar[5,1])
+var.total = var.pays+var.region+var.resid
+var.region/var.total
+var.pays/var.total
+```
+Cette dernière proportion due au pays correspond à la corrélation intra-pays. On peut aussi calculer la corrélation intra-région:
+```{r}
+(var.pays+var.region)/var.total
+```
+# Analyse de l'association aux UVB
+La fonction *lme* exige les mêmes effets aléatoires à tous les niveaux (l'ordonnée à l'origine dans le modèle précédent). Pour spécifier un effet aléatoire sur les UVB au niveau pays mais pas au niveau région, il faut utiliser la fonction *lmer*.
+
+```{r}
+library(lme4)
+melaLME.UVB = lmer(RR~UVB + (1|region)+(UVB|nation),data=mmec)
+summary(melaLME.UVB)
+```
+Pour tester l'hypothèse nulle que la pente des UVB ne varie pas d'un pays à l'autre, on estime un modèle sans l'effet aléatoire sur la pente des UVB et on fait un test du rapport de vraisemblance. Comme on compare des modèles qui ne diffèrent que dans le modèle de variance-covariance, il est approprié de les comparer selon le critère du MVR. Il faut alors spécifier l'option *refit=F* car par défaut *anova* réestime les modèles par MV standard.
+```{r}
+melaLME.UVB0 = lmer(RR~UVB + (1|region)+(1|nation),data=mmec)
+anova(melaLME.UVB0,melaLME.UVB,refit=F)
+```
+La distribution du khi-carré à 2 degrés de libertés n'est pas appropriée parce que l'alternative pour le paramètre de variance de la pente est unilatérale (>0). La distribution correcte est un mélange de khi-carrés à 1 et 2 degrés de liberté.
+```{r}
+0.5*pchisq(20.067,2,lower.tail=F) + 0.5*pchisq(20.067,1,lower.tail=F)
+```
+Corrélation en fonction des UVB
+
+```{r}
+cor.t = function(t,u=0,sigma0,sigma01,sigma1,sigmae)
+{
+  varu = sigma0 + 2*sigma01*u + sigma1*u^2 + sigmae
+  vart = sigma0 + 2*sigma01*t + sigma1*t^2 + sigmae
+  covt = sigma0 + sigma01*(t+u) + sigma1*t*u
+  ifelse (t==u,1,covt/sqrt(varu*vart))
+}
+covg = 0.03*sqrt(0.154982*0.005107)
+plot(seq(-4,4,by=0.5),cor.t(seq(-4,4,by=0.5),sigma0=0.154982,sigma01=covg,sigma1=0.005107,sigmae=0.013045+0.096433),type="l",ylab="corrélation",ylim=c(0,1))
+lines(seq(-4,4,by=0.5),cor.t(1,sigma0=0.154982,sigma01=covg,sigma1=0.005107,sigmae=0.013045+0.096433)^abs(seq(-4,4,by=0.5)),col="red")
+legend(-4,1,c("Pente aléatoire","autorégressif d'ordre 1"),lty=1,col=c("black","red"))
+```
+
+
+À ma connaissance, dans R il est seulement possible de produire les résidus bruts ou standardisés des modèles mixtes.
+```{r}
+plot(melaLME.UVB)
+```
+
+

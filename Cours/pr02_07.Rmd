@@ -1,0 +1,41 @@
+---
+title: "Lissage avec réponse dichotomique"
+output: html_notebook
+---
+#Importation des données
+
+```{r}
+chp05 = read.table("chp05.txt",header=TRUE)
+```
+Alternative: ouvrir une fenêtre pour choisir le fichier
+```{r}
+chp05 = read.table(file.choose(),header=TRUE)
+```
+
+# Recodage de variables
+```{r}
+chp05$Y = ifelse(chp05$PDS<=2500,1,0)
+```
+# Modèles additifs généralisés
+Il y a des fonctions gam dans plus d'un package R. Nous allons utiliser celle du module mgcv
+```{r}
+library(mgcv)
+```
+
+
+Ici, on laisse la procédure déterminer le nombre de degrés de liberté
+```{r}
+lissage1 = gam(Y~s(AGE),data=chp05,family=binomial)
+lissage1
+plot(lissage1)
+```
+
+
+Ici, on spécifie le paramètre de lissage, mais pas en terme de degrés de liberté
+
+```{r}
+lissage2 = gam(Y~s(AGE),sp=0.01,data=chp05,family=binomial)
+lissage2
+plot(lissage2)
+```
+

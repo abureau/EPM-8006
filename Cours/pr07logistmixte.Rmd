@@ -1,0 +1,82 @@
+---
+title: "Modèle logistique mixte pour essai de crème anti-infectieuse"
+output: html_notebook
+---
+
+# Lecture des données
+```{r}
+infection = read.table("infection.txt",header=TRUE)
+```
+Alternative pour ouvrir une fenêtre pour choisir le fichier
+```{r}
+infection = read.table(file.choose(),header=TRUE)
+```
+
+# Modèle logistique avec effet aléatoire pour la clinique seulement
+Il faut spécifier d'évaluer la fonction en 9 points dans le calcul de l'intégrale (comme SAS) avec l'option *nAGQ=9*.
+```{r}
+library(lme4)
+model1 <- glmer(cbind(x,n-x) ~ t + (1 | clinic), family=binomial, nAGQ=9, data=infection)
+summary(model1)
+```
+Pour obtenir un intervalle de confiance pour le rapport de cote, on calcule l'intervalle sur l'échelle log et on prend l'exponentielle.
+
+```{r}
+exp(cbind(coef(summary(model1))[,"Estimate"],confint(model1,parm="beta_")))
+```
+
+## Comparaison avec le modèle marginal estimé par GEE
+```{r}
+library(geepack)
+model1.gee = geeglm(cbind(x,n-x) ~ t, id=clinic, corstr = "exch", family=binomial, data=infection, scale.fix = T)
+summary(model1.gee)
+```
+Pour obtenir un intervalle de confiance pour le rapport de cote, on calcule l'intervalle sur l'échelle log et on prend l'exponentielle.
+```{r}
+library(doBy);
+tmp = esticon(model1.gee,L=diag(2))[,1:2]
+exp(cbind(tmp[,1],tmp[,1]-qnorm(0.975)*tmp[,2],tmp[,1]+qnorm(0.975)*tmp[,2]));
+```
+
+
+# Modèle log-binomial avec effet aléatoire pour la clinique seulement
+La fonction de lien log permet d'estimer des log-risque relatifs plutôt que des log-rapports de cote.
+
+Ici l'estimation fonctionne seulement avec l'approximation de Laplace du maximum de vraisemblance (méthode par défaut de *glmer*). Elle correspond à *nAGQ=1*.
+```{r}
+library(lme4)
+model1.log <- glmer(cbind(x,n-x) ~ t + (1 | clinic), family=binomial(link=log), data=infection)
+summary(model1.log)
+```
+Pour obtenir un intervalle de confiance pour le risque relatif, on calcule l'intervalle sur l'échelle log et on prend l'exponentielle. Notez que seule la méthode de Wald fonctionne avec le lien log.
+```{r}
+exp(cbind(coef(summary(model1.log))[,"Estimate"],confint(model1.log,parm="beta_",method="Wald")))
+```
+## Comparaison avec le modèle marginal estimé par GEE
+```{r}
+library(geepack)
+model1.gee.log = geeglm(cbind(x,n-x) ~ t, id=clinic, scale.fix = T,corstr = "exch", family=binomial(link=log), data=infection)
+summary(model1.gee.log)
+```
+Pour obtenir un intervalle de confiance pour le risque relatif, on calcule l'intervalle sur l'échelle log et on prend l'exponentielle.
+```{r}
+library(doBy);
+tmp = esticon(model1.gee.log,L=diag(2))[,1:2]
+exp(cbind(tmp[,1],tmp[,1]-qnorm(0.975)*tmp[,2],tmp[,1]+qnorm(0.975)*tmp[,2]));
+```
+# Modèle logistique avec effet aléatoire pour la clinique et l'effet du traitement
+Avec deux effets aléatoires, on ne peut plus effectuer l'intégration numérique. On doit avoir recours à l'approximation de Laplace.
+```{r}
+model2 <- glmer(cbind(x,n-x) ~ t + (1 + t | clinic), family=binomial, data=infection)
+summary(model2)
+```
+
+# Modèle log-binomial avec effet aléatoire pour la clinique et de l'effet du traitement
+```{r}
+model2.log <- glmer(cbind(x,n-x) ~ t + (1 + t | clinic), family=binomial(link=log), data=infection)
+summary(model2.log)
+```
+```{r}
+anova(model1.log,model2.log)
+```
+

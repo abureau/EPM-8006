@@ -1,0 +1,26 @@
+---
+title: "Régression logistique conditionnelle pour essai de crème anti-infectieuse"
+output: html_notebook
+---
+
+# Lecture des données
+```{r}
+infection = read.table("infection.txt",header=TRUE)
+#infection = read.table(file.choose(),header=TRUE)
+head(infection)
+```
+# Conversion en une ligne par sujet
+```{r}
+infection.gueri = with(infection,data.frame(clinic = rep(clinic,x),t=rep(t,x),y=rep(rep(1,16),x)))
+infection.pasgueri = with(infection,data.frame(clinic = rep(clinic,n-x),t=rep(t,n-x),y=rep(rep(0,16),n-x)))
+infection.long=rbind(infection.gueri,infection.pasgueri)
+table(infection.long$y)
+```
+
+# Exécution de l'analyse logistique conditionnelle de la guérison
+
+```{r}
+library(survival)
+model1 = clogit(y~t+strata(clinic),data=infection.long,ties="exact")
+summary(model1)
+```

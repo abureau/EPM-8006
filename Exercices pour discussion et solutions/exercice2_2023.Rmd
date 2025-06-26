@@ -1,0 +1,127 @@
+---
+title: "Régression ordinale de la satisfaction des patients"
+output: html_notebook
+---
+
+# Lecture du jeu de données
+
+```{r}
+exe = read.table("../donnees/exe11_01.txt",header=T)
+exe
+```
+
+## Recodage de la variable réponse
+```{r}
+exe$SATISF = factor(exe$SATISF,levels=c("pas","peu","assez","tres"))
+exe$SATISFinv = factor(exe$SATISF,levels=c("tres","assez","peu","pas"))
+levels(exe$SATISF)
+levels(exe$SATISFinv)
+```
+# Estimation d'un modèle multinomial non-ordonné
+L'hypothèse de cotes proportionnelles ne s'applique pas. On préfère utiliser la catégorie la plus élevée "très satisfait" comme catégorie de référence. C'est aussi la plus fréquente.
+
+```{r}
+library(nnet)
+model1.multinom <- multinom(SATISFinv ~ MOMENT*AGE,weights=F,data=exe)
+summary(model1.multinom)
+```
+
+# Estimation du modèle de régression ordinale avec cotes proportionnelles
+Avec terme d'interaction
+```{r}
+library(rms)
+model1.lrm <- lrm(SATISF ~ MOMENT*AGE,weights=F,data=exe)
+model1.lrm
+```
+# Comparaison des deux modèles
+Test du rapport de vraisemblance de l'hypothèse des cotes proportionnelles.
+```{r}
+RVstat = model1.lrm$deviance[2]-model1.multinom$deviance
+RVstat
+1-pchisq(RVstat,6)
+```
+On rejette de peu l'hypothèse nulle des cotes proportionnelles au niveau de signification 0.05. On a le choix de poursuivre avec ce modèle, ou avec le modèle de régression multinomiale non-ordonnée.
+
+# 1- Poursuivre avec le modèle multinomial non-ordonné
+Pour tester l'effet modifiant de l'âge, on estime le modèle sans le terme d'interaction, et on fait un test du rapport de vraisemblance.
+```{r}
+model2.multinom <- multinom(SATISFinv ~ MOMENT+AGE,weights=F,data=exe)
+sortie2 = summary(model2.multinom)
+sortie2
+anova(model1.multinom,model2.multinom)
+```
+Il n'y a pas d'évidence de modification de l'effet du moment de la journée par l'âge. On rapporte donc les RCs pour les divers niveaux de satisfaction d'une consultation en PM vs. AM conditionel à l'âge à partir du modèle 2 sans terme d'interaction.
+```{r}
+et=sortie2$standard.errors[,2]
+exp(cbind(coef(model2.multinom)[,2],coef(model2.multinom)[,2]-qnorm(0.975)*et,coef(model2.multinom)[,2]+qnorm(0.975)*et))
+```
+On observe donc que les patients sont plus portés à rapporter des niveaux de satisfaction bas si leur visite est en PM plutôt qu'en AM.
+
+On peut aussi estimer des RCs bruts sans ajuster pour l'âge puisque ce n'était pas demandé dans la question.
+```{r}
+model3.multinom <- multinom(SATISFinv ~ MOMENT,weights=F,data=exe)
+sortie3 = summary(model3.multinom)
+sortie3
+```
+
+```{r}
+et=sortie3$standard.errors[,2]
+exp(cbind(coef(model3.multinom)[,2],coef(model3.multinom)[,2]-qnorm(0.975)*et,coef(model3.multinom)[,2]+qnorm(0.975)*et))
+```
+Les résultats bruts suggèrent un rapport de cote d'insatisfaction plus grand entre une visite en PM vs. AM que lorsqu'on ajuste pour l'âge. Il peut s'agir simplement d'une différence de définition due à la non-collapsibilité du RC.
+
+# 2- Poursuivre avec le modèle de régression ordinale avec cotes proportionnelles
+Le test de Wald dans la sortie du modèle 1 ne rejette pas l'hypothèse nulle d'absence de modification de l'effet du moment de la journée par l'âge des patients. Pour présenter un RC commun aux deux strates d'âge, on estime un modèle 2 sans terme d'interaction.
+```{r}
+model2.lrm <- lrm(SATISF ~ MOMENT+AGE,weights=F,data=exe)
+model2.lrm
+```
+On rapporte le RC pour des niveaux de satisfaction plus élevés d'une consultation en PM vs. AM, conditionel à l'âge.
+```{r}
+et=sqrt(diag(model2.lrm$var))
+exp(cbind(coef(model2.lrm),coef(model2.lrm)-qnorm(0.975)*et,coef(model2.lrm)+qnorm(0.975)*et))
+```
+On observe donc que les patients sont moins portés à rapporter des niveaux de satisfaction plus élevés si leur visite est en PM plutôt qu'en AM. (En d'autres termes, les patients sont plus portés à rapporter des niveaux de satisfaction plus bas si leur visite est en PM plutôt qu'en AM.)
+
+On peut aussi estimer un RC brut sans ajuster pour l'âge puisque ce n'était pas demandé dans la question.
+```{r}
+model3.lrm <- lrm(SATISF ~ MOMENT,weights=F,data=exe)
+model3.lrm
+```
+
+On rapporte le RC brut pour des niveaux de satisfaction plus élevés d'une consultation en PM vs. AM.
+```{r}
+et=sqrt(diag(model3.lrm$var))
+exp(cbind(coef(model3.lrm),coef(model3.lrm)-qnorm(0.975)*et,coef(model3.lrm)+qnorm(0.975)*et))
+```
+Le RC brut est plus grand entre une visite en PM vs. AM que lorsqu'on ajuste pour l'âge. Il peut s'agir simplement d'une différence de définition due à la non-collapsibilité du RC. Les conclusions restent semblables à celles en ajustant pour l'âge.
+
+## Ajustement pour l'âge avec un score de propension
+Calcul des probabilités de visite en AM et PM selon l'âge
+```{r}
+model.moment = glm(MOMENT~AGE,data=exe,family=binomial,weights = F)
+summary(model.moment)
+```
+Calcul du poids de probabilité inverse d'être en AM
+```{r}
+ps = predict(model.moment, type = "response")
+w=ifelse(exe$MOMENT=="pm",1/ps,1/(1-ps))
+summary(w)
+```
+Normalisation des poids
+```{r}
+nipw = w/(mean(w))
+summary(nipw)
+```
+
+Analyse de cote proportionnelle (non robuste à la définition des poids à partir des données)
+```{r}
+model4.lrm <- lrm(SATISF ~ MOMENT,weights=F*nipw,data=exe)
+model4.lrm
+```
+```{r}
+et=sqrt(diag(model4.lrm$var))
+exp(cbind(coef(model4.lrm),coef(model4.lrm)-qnorm(0.975)*et,coef(model4.lrm)+qnorm(0.975)*et))
+```
+
+Pas de grand changement du RC ajusté par rapport au RC brut, l'âge ne confond pas l'association du moment de la journée avec le degré de satisfaction.

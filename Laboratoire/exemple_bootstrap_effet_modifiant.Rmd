@@ -1,4 +1,4 @@
-v---
+---
 title: "Intervalle de confiance bootstrap pour le RERI"
 output: html_notebook
 ---

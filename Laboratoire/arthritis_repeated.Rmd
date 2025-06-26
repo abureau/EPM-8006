@@ -1,0 +1,56 @@
+---
+title: "Régression ordinale de mesures répétées d'un score d'arthrite"
+output: html_notebook
+---
+
+#Lecture des données
+
+```{r}
+library(foreign)
+ds <- read.dta("arthritis.dta")
+head(ds)
+```
+
+# Réorganisation des données
+
+Conversion au format long
+```{r}
+dslong <- reshape(ds, idvar="id", varying=c("y1","y2","y3","y4"), v.names="y", timevar="time", time=1:4, direction="long")
+dslong <- dslong[order(dslong$id, dslong$time),]
+```
+
+Élimination des données manquantes
+```{r}
+dslong <- dslong[complete.cases(dslong$y),]
+table(dslong$y)
+```
+
+Recodage de variables
+```{r}
+dslong$month <- 2*(dslong$time-1)
+dslong$sqrtmonth <- dslong$month^0.5
+```
+
+# Affichage des proportions des niveaux du score par groupe et visite
+
+```{r}
+tab = table(dslong$y,dslong$month,dslong$trt)
+tab.somme = apply(tab,2:3,sum)
+tab.prop = sweep(tab,2:3,tab.somme,"/")
+
+par(mfrow=c(2,1))
+par(mar=c(1.5, 4.2, 3, 0.5))
+barplot(tab.prop[,,1],legend.text=1:5,args.legend=list(x=1,y=1,bty="n"),ylab="Trt=0")
+par(mar=c(3.5, 4.2, 1, 0.5))
+barplot(tab.prop[,,2],ylab="Trt=1")
+mtext("mois",side=1,line=2)
+```
+
+# Analyse
+La fonction *ordLORgee* estime les log-rapports de cote d'être dans une catégorie plus basse (comme le défaut dans SAS), et il ne semble pas y avoir d'option pour changer cela.
+```{r}
+library(multgee)
+mod.gee = ordLORgee(y~trt + sqrtmonth + trt:sqrtmonth,id = id,repeated=time,data=dslong, LORstr="time.exch")
+summary(mod.gee)
+```
+

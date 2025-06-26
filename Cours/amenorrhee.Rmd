@@ -1,0 +1,85 @@
+---
+title: "Traitement des pertes au suivi"
+output: html_notebook
+---
+
+# Lecture des données
+```{r}
+amenorrhea = read.table("amenorrhea.dat",na.strings = ".")
+names(amenorrhea) = c("ID","dose","temps","y")
+head(amenorrhea)
+```
+
+# Ajout de variables pour l'observation précédente et la présence du sujet
+On décale aussi le temps de -1 pour ramener le temps initial à 0 comme Fitzmaurice, Laird et Ware.
+```{r}
+amenorrhea$prevy = unlist(tapply(amenorrhea$y,amenorrhea$ID,function(vec) c(NA,vec[-length(vec)])))
+amenorrhea$r = ifelse(is.na(amenorrhea$y),0,1)
+amenorrhea$temps = amenorrhea$temps-1
+head(amenorrhea)
+```
+On peut retirer les lignes des observations prévues après la perte au suivi
+```{r}
+amenorrhea = amenorrhea[amenorrhea$r==1 | !is.na(amenorrhea$prevy),]
+head(amenorrhea)
+```
+# Modèle de la probabilité d'observer la réponse y
+```{r}
+probobs.mod = glm(r~factor(temps) + dose*prevy,data=amenorrhea,family=binomial)
+pobs = predict(probobs.mod,type="response")
+```
+# Calcul des poids
+On crée une variable de probabilité inverse de rétention dans l'étude
+```{r}
+amenorrhea$invp = NA
+amenorrhea$invp[is.na(amenorrhea$prevy)] = 1
+amenorrhea$invp[!is.na(amenorrhea$prevy)] = 1/pobs
+head(amenorrhea)
+```
+On prend le produit des probabilités inverse chez chaque sujet pour obtenir les poids.
+```{r}
+amenorrhea$ipcw = unlist(tapply(amenorrhea$invp,amenorrhea$ID,cumprod))
+head(amenorrhea)
+tail(amenorrhea)
+```
+On normalise les poids. Pour ce faire il faut d'abord ordonner le jeu de donnée par temps d'observation.
+```{r}
+ord = order(amenorrhea$temps)
+amenorrhea = amenorrhea[ord,]
+nt = tapply(amenorrhea$y,amenorrhea$temps,function(vec) sum(!is.na(vec)))
+amenorrhea$nt = nt[amenorrhea$temps+1]
+amenorrhea$nipcw = unlist(tapply(amenorrhea$ipcw,amenorrhea$temps,function(vec) vec/sum(vec)))*amenorrhea$nt
+head(amenorrhea)
+tail(amenorrhea)
+```
+# Estimation du modèle en pondérant les observations
+On commence par les poids bruts comme le font Fitzmaurice, Laird et Ware. 
+
+La fonction *geeglm* donne les mêmes estimations que proc genmod de SAS. Il faut d'abord réordonner le jeu de donnée par identifiant pour utiliser cette fonction.
+```{r}
+library(geepack)
+ord = order(amenorrhea$ID)
+amenorrhea = amenorrhea[ord,]
+amenorrhea$temps2 = amenorrhea$temps^2
+amenorrhea.ipcw = geeglm(y~dose*temps+dose*temps2,data=amenorrhea,weights=ipcw,id=ID,family=binomial,scale.fix=T)
+summary(amenorrhea.ipcw)
+```
+La fonction *geem* donne des estimations identiques.
+```{r}
+library(geeM)
+amenorrhea.complet = amenorrhea[!is.na(amenorrhea$y),]
+amenorrhea.ipcw = geem(y~dose*temps+dose*temps2,data=amenorrhea.complet,weights=ipcw,id=ID,family=binomial)
+summary(amenorrhea.ipcw)
+```
+On essaie ensuite les poids normalisés. 
+
+Ici aussi la fonction *geeglm* donne les mêmes estimations que proc genmod de SAS.
+```{r}
+amenorrhea.nipcw = geeglm(y~dose*temps+dose*temps2,data=amenorrhea,weights=nipcw,id=ID,family=binomial,scale.fix=T)
+summary(amenorrhea.nipcw)
+```
+La fonction *geem* donne des estimations identiques.
+```{r}
+amenorrhea.nipcw = geem(y~dose*temps+dose*temps2,data=amenorrhea.complet,weights=nipcw,id=ID,family=binomial)
+summary(amenorrhea.nipcw)
+```

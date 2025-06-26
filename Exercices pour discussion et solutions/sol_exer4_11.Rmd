@@ -1,0 +1,26 @@
+---
+title: "Régression de Poisson"
+output: html_notebook
+---
+
+#Définition du jeu de données
+
+```{r}
+taux = data.frame(y=c(604,480),R=c(0,1),N=c(83879,59314))
+taux
+```
+
+# Estimation du modèle de Poisson
+```{r}
+fit = glm(y~R+offset(log(N)),data=taux,family = poisson(link="log"))
+summary(fit)
+```
+# Tests du rapport de vraisemblance
+```{r}
+anova(fit,test="Chi")
+```
+# Rapports de taux et leur intervalle de confiance
+```{r}
+exp(cbind(coef(fit),confint(fit)))
+```
+Bien que le p ne soit pas inférieur à 5% et que l'intervalle de confiance à 95% inclut la valeur 1, ces données nous semblent davantage compatibles avec un rapport de taux supérieur à 1 que égal à 1.

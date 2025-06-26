@@ -1,0 +1,89 @@
+---
+title: "Régression linéaire"
+output: html_notebook
+---
+
+#Importation des données
+
+```{r}
+fram1 = read.csv(file.choose())
+```
+
+#Modèle de base
+R est un environnement basé sur des fonctions qui manipulent des objets. On assigne le résultat d'une analyse à un objet, et on applique des fonctions à cet objet pour afficher les résultats. L'affichage minimal est produit par la fonction *print* qui est invoquée implicitement quand on tape le nom d'un objet:
+```{r}
+reglin = lm(SYSBP~SEX+AGE+BMI,data=fram1)
+reglin
+```
+La fonction *anova* produit la table d'analyse de variance et la fonction *summary* les tests de Student sur les coefficients:
+```{r}
+regvide = lm(SYSBP~1,data=fram1)
+anova(regvide,reglin)
+summary(reglin)
+```
+Pour les intervalles de confiance, c'est la fonction *confint*. Pour afficher les estimations ponctuelles à côté, in faut les extraire avec la fonction *coef* et les accoler aux intervalles avec la fonction *cbind*
+```{r}
+cbind(coef(reglin),confint(reglin))
+```
+#Tests d'hypothèses multiples
+
+Pour tester simultanément plusieurs coefficients, il faut estimer un modèle avec et un modèle sans les coefficients à tester. Les termes d'interactions peuvent être spécifiés directement dans la formule du modèle en entrant les termes impliqués séparés par ":". Contrairement à SAS, dans R, la notation "*" spécifie tous les termes impliquant deux variables. Ainsi, les deux expression suivantes donnent le même modèle :
+```{r}
+reglin2 = lm(SYSBP ~ SEX + CURSMOKE + SEX:CURSMOKE,data=fram1)
+reglin2
+reglin2 = lm(SYSBP ~ SEX*CURSMOKE,data=fram1)
+reglin2
+```
+Ensuite on estime le modèle sans les termes à tester et on les compare:
+```{r}
+reglin2r = lm(SYSBP ~ SEX,data=fram1)
+anova(reglin2r,reglin2)
+```
+# Estimation et tests de combinaisons linéaires
+La fonction *glht* du module *multcomp* permet d'estimer et tester des combinaisons linéaires de paramètres, et corrigera les valeurs p et intervalles de confiance pour la multiplicité des combinaisons si vous en estimez et testez plus d'une.
+```{r}
+library(multcomp)
+fnfH = glht(reglin2,linfct="CURSMOKE + SEX:CURSMOKE=0")
+summary(fnfH)
+confint(fnfH)
+```
+# Vérification des postulats
+
+La fonction *plot* appliquée à un objet de modèle linéaire produits des graphiques qui permettent de vérifier les hypothèses de linéarité, d'homoscédasticité et de normalité et de détecter des valeurs extrême et influentes. Le lissage des résidus et de leur racine carrée en fonction des valeurs prédites et de la distance de Cook est effectué automatiquement.
+```{r}
+plot(reglin,which=1:5)
+```
+
+#Estimation robuste de la variance
+
+La fonction *sandwich* du module du même nom produit une estimation robuste de la matrice de variance-covariance des estimations des coefficients. Il faut en extraire les erreurs types soit même.
+```{r}
+library(sandwich)
+ET.robuste = sqrt(diag(sandwich(reglin)))
+cbind("coef"=coef(reglin),"ET robuste"=ET.robuste,"borne inf 95%" = coef(reglin) - qnorm(0.975)*ET.robuste,"borne sup 95%" = coef(reglin) + qnorm(0.975)*ET.robuste)
+```
+
+#Vérification de la multicollinéarité
+Le module *mctest* offre divers diagnostics de multicollinéarité. La fonction *imcdiag* de ce module produit les facteurs d'inflation de la variance (VIF) entre autres. 
+```{r}
+library(mctest)
+imcdiag(reglin)
+```
+Pour obtenir seulement les VIFs, une alternative est d'utiliser la fonction *vif* du module *rms*.
+```{r}
+library(rms)
+vif(reglin)
+```
+## Données influentes
+Différence dans la valeur du beta de l'IMC due à la suppression d'une observation
+```{r}
+dfb = dfbetas(reglin);
+dfb[,4][abs(dfb[,4]) > 0.2]
+fram1$RANDID[abs(dfb[,4]) > 0.2]
+```
+
+Distance de Cook
+```{r}
+plot(y = cooks.distance(reglin), x = fram1$RANDID);
+fram1$RANDID[cooks.distance(reglin) > 0.03];
+```

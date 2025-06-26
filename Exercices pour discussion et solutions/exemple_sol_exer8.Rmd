@@ -1,0 +1,281 @@
+---
+title: "Exemple de solution exercices 8.1 et 8.2"
+output: html_notebook
+---
+
+# Lecture des données
+```{r}
+mscm = read.csv(file.choose())
+```
+Vérification que l'importation s'est bien déroulée
+```{r}
+str(mscm)
+```
+```{r}
+table(mscm$id)
+```
+```{r}
+table(mscm$day)
+```
+Il y a bien une ligne par sujet par jour.
+
+# Statistiques descriptives au baseline
+```{r}
+summary(mscm[mscm$day==8,3:ncol(mscm)])
+```
+```{r}
+tab=table(mscm$bstress[mscm$day==8])
+tab
+prop.table(tab)
+```
+Je vais catégoriser l'exposition d'intérêt pour obtenir des statistiques descriptives en fonction du niveau d'exposition. Il faut spécifier le premier point de coupure inférieur < 0 car les intervalles sont ouverts à gauche.
+
+```{r}
+mscm$bstressCat = cut(mscm$bstress,breaks=c(-0.01,0,0.2,1))
+table(mscm$bstressCat[mscm$day==8])
+```
+Calcul des moyennes (proportions) de maladie de l'enfant par niveau de stress de la mère et par jour.
+```{r}
+malmoy = with(mscm,tapply(illness,list(day,bstressCat),mean,na.rm=T))
+malmoy
+```
+
+# Graphique des moyennes
+On retire les 2 derniers jours qui n'ont pas de données.
+```{r}
+malmoy = malmoy[-(nrow(malmoy)-0:1),]
+plot(rownames(malmoy),malmoy[,1],type="p",xlab = "jour",ylab="proportion",ylim=c(0,0.25))
+points(rownames(malmoy),malmoy[,2],col="blue")
+points(rownames(malmoy),malmoy[,3],col="red")
+lines(lowess(rownames(malmoy),malmoy[,1]))
+lines(lowess(rownames(malmoy),malmoy[,2]),col="blue")
+lines(lowess(rownames(malmoy),malmoy[,3]),col="red")
+```
+Il y a beaucoup de variation dans les moyennes, mais la tendance semble pouvoir être bien approximée de façon linéaire.
+```{r}
+library(tableone)
+tab1 = CreateTableOne(data=mscm[mscm$day==8,],vars=names(mscm)[-c(1:4,ncol(mscm))],factorVars =c("married","employed","education", "chlth", "mhlth","race","csex"),strata="bstressCat")
+tab1
+```
+
+Il faut regrouper ensemble des catégories à faibles fréquences.
+
+```{r}
+mscm$education[mscm$education==1]=2
+mscm$education[mscm$education==5]=4
+mscm$chlth[mscm$chlth<=2]=3
+mscm$mhlth[mscm$mhlth<=2]=3
+tab1 = CreateTableOne(data=mscm[mscm$day==8,],vars=names(mscm)[-c(1:4,ncol(mscm))],factorVars =c("married","employed","education", "chlth", "mhlth","race","csex"),strata="bstressCat")
+tab1
+```
+
+# Analyses GEE
+Le QIC peut être utilisé pour comparer des modèles variant autant
+dans leur structure de variance-covariance que dans leur partie fixe lorsque la distribution de travail n'est pas normale. 
+
+## Analyse avec distribution de travail binomiale
+La matrice "unstructured" que le QIC favorise dans SAS mène à un trop grand nombre de paramètres selon *geem*, et *geepack* échoue. 
+```{r}
+library(geeM)
+maladie.gee=geem(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm,id=id,corstr="unstructured", family=binomial(link="log"),waves=day, scale.fix=T)
+```
+Essayons plutôt les modèles autorégressif, échangeable et indépendance. 
+```{r}
+library(geepack)
+maladie.ar=geeglm(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm,id=id,corstr="ar1", family=binomial(link="log"),waves=day, scale.fix=T)
+summary(maladie.ar)
+```
+```{r}
+maladie.ech=geeglm(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm,id=id,corstr="exch", family=binomial(link="log"),waves=day, scale.fix=T)
+summary(maladie.ech)
+```
+```{r}
+maladie.ind=geeglm(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm,id=id,corstr="ind", family=binomial(link="log"),waves=day, scale.fix=T)
+summary(maladie.ind)
+```
+
+Calcul des QIC:
+```{r}
+QIC(maladie.ar)
+QIC(maladie.ech)
+QIC(maladie.ind)
+```
+Les valeurs diffèrent de celles de SAS, et l'ordre des modèles est différent, favorisant ici le modèle d'indépendance qui a le plus petit QIC. Notons que les QIC de la version 1.3.12 du module *geepack* diffèrent de ceux de versions antérieures pour les modèles échangeables et autorégressifs. Étant donné que la quasi-vraisemblance varie peu entre tous les modèles, les valeurs de la version 1.3.12 sont plus crédibles.
+
+## Analyse avec distribution de travail Poisson
+```{r}
+library(geeM)
+maladie.Poisson.gee=geem(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm,id=id,corstr="unstructured", family=poisson(link="log"),waves=day, scale.fix=T)
+```
+Essayons plutôt les modèles autorégressif, échangeable et indépendance. 
+```{r}
+library(geepack)
+maladie.Poisson.ar=geeglm(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm,id=id,corstr="ar1", family=poisson(link="log"),waves=day, scale.fix=T)
+summary(maladie.Poisson.ar)
+```
+```{r}
+maladie.Poisson.ech=geeglm(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm,id=id,corstr="exch", family=poisson(link="log"),waves=day, scale.fix=T)
+summary(maladie.Poisson.ech)
+```
+```{r}
+maladie.Poisson.ind=geeglm(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm,id=id,corstr="ind", family=poisson(link="log"),waves=day, scale.fix=T)
+summary(maladie.Poisson.ind)
+```
+
+Calcul des QIC:
+```{r}
+QIC(maladie.Poisson.ar)
+QIC(maladie.Poisson.ech)
+QIC(maladie.Poisson.ind)
+```
+Les valeurs diffèrent de celles de SAS. Notons que les QIC de la version 1.3.12 du module *geepack* diffèrent de ceux de versions antérieures pour les modèles échangeables et autorégressifs. Étant donné que la quasi-vraisemblance varie peu entre tous les modèles, les valeurs de la version 1.3.12 sont plus crédibles.
+
+Avec la distribution de travail de Poisson le modèle autorégressif a le plus petit QIC. On ne peut pas comparer un QIC obtenu avec deux distributions de travail différentes. Comme la distribution binomiale ne provoque pas plus de problèmes de convergence que la distribution de Poisson, on retient la distribution binomiale.
+
+# Estimation des effets du stress
+Puisque day est entré de façon continue, la ligne "bstress" du tableau de type 3 ne donne	pas l'effet "moyen" du stress initial. On peut plutôt l'obtenir en déterminant l'effet au temps moyen. Le jour du milieu de suivi est (30 + 8)/2 = 19.
+```{r}
+library(doBy)
+res=signif(esticon(maladie.ar, L = c(0,0,1,rep(0,12),19)),3)
+res
+exp(cbind(RR=res$estimate,confint(res)))
+```
+
+## Vérification des hypothèses
+
+Calcul des DFBETAs avec la fonction *dfbetas* ne fonctionne pas sur un objet de type *geeglm*.
+
+Multicollinéarité
+
+On estime un modèle log-binomial bidon. J'en profite pour spécifier *x=T* pour obtenir la matrice des X dans l'objet en sortie, où les observations avec valeurs manquantes auront été retirées. Cela sera utile pour examiner les résidus en fonction des variables explicatives.
+```{r}
+maladie.glm=glm(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,data=mscm, family=binomial(link="log"),x=T)
+library(rms)
+vif(maladie.glm)
+```
+Ok sauf pour exposition et interaction - c'est un peu attendu qu'il y ait
+de la collinéarité entre l'exposition et l'interaction et on ne peut rien
+y faire.
+
+## Linéarité
+```{r}
+plot(maladie.glm$x[,"day"],resid(maladie.ar),xlab="Jour")
+lines(lowess(maladie.glm$x[,"day"],resid(maladie.ar)),col="red")
+```
+```{r}
+plot(maladie.glm$x[,"bstress"],resid(maladie.ar),xlab="Jours de stress initiaux")
+lines(lowess(maladie.glm$x[,"bstress"],resid(maladie.ar)),col="red")
+```
+
+```{r}
+plot(maladie.glm$x[,"billness"],resid(maladie.ar),xlab = "Jours de maladie initiaux")
+lines(lowess(maladie.glm$x[,"billness"],resid(maladie.ar)),col="red")
+```
+
+Conclusion : Nos données ne permettent pas de rejeter l'hypothèse que l'association entre le stress maternel initial et le risque que l'enfant soit malade ne varie pas dans le mois suivant (p de l'interaction = 0.65). Un stress maternel initial plus élevé
+est associé dans nos données à un risque plus important que l'enfant soit malade dans
+les jours du mois suivant, mais la puissance insuffisante ne permet pas de conclure concernant l'association réelle dans la population (RR = 1.467  IC à 95%: 0.687  3.13). 
+
+# Analyse sous modèle linéaire mixte généralisé 
+
+## MV par approximation de Laplace avec ordonnée à l'origine aléatoire, lien logit 
+Le critère de convergence n'est pas atteint, mais la log-vraisemblance égale celle de la procédure GLIMMIX de SAS.
+```{r}
+library(lme4)
+maladie.glmer=glmer(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness+(1|id),nAGQ=9,data=mscm, family=binomial(link="logit"))
+summary(maladie.glmer)
+```
+```{r}
+res=signif(esticon(maladie.glmer, L = c(0,0,1,rep(0,12),19)),3)
+res
+exp(cbind(res$estimate,confint(res)))
+```
+
+## MV par approximation de Laplace avec ordonnée à l'origine aléatoire, lien log échoue 
+
+## MV par approximation de Laplace avec ordonnée à l'origine et pente aléatoire, lien logit 
+Le critère de convergence n'est pas atteint, mais la log-vraisemblance égale celle de la procédure GLIMMIX de SAS.
+```{r}
+library(lme4)
+maladie.glmerpente=glmer(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness+(day|id),data=mscm, family=binomial(link="logit"))
+summary(maladie.glmerpente)
+```
+
+```{r}
+res=signif(esticon(maladie.glmerpente, L = c(0,0,1,rep(0,12),19)),3)
+res
+exp(cbind(res$estimate,confint(res)))
+```
+
+## Comparaison des deux modèles
+```{r}
+anova(maladie.glmer,maladie.glmerpente)
+```
+Le modèle avec pente aléatoire s'ajuste beaucoup mieux aux données.
+
+## Maximum d'une pseudo vraisemblance, lien logit 
+Il n'est pas possible de spécifier un modèle sans effet aléatoire avec la fonction glmmPQL comme avec la procédure GLIMMIX de SAS. Je spécifie donc un modèle avec à la fois une ordonnée à l'origine aléatoire et une structure de corrélation autorégressive d'ordre 1 pour les pseudo-résidus.
+```{r}
+library(MASS)
+library(nlme)
+maladie.glmmPQL = glmmPQL(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,random=~1|id, corr = corAR1(,form=~day|id),data=mscm,family=binomial(link="logit"))
+summary(maladie.glmmPQL)
+```
+```{r}
+res=signif(esticon(maladie.glmmPQL, L = c(0,0,1,rep(0,12),19)),3)
+res
+exp(cbind(res$estimate,confint(res)))
+```
+
+## Maximum d'une pseudo vraisemblance, lien log 
+Estimation converge ici alors qu'elle échoue avec la procédure GLIMMIX de SAS.
+
+```{r}
+maladie.glmmPQLlog = glmmPQL(illness~day*bstress+married+factor(education)+employed+factor(chlth)+factor(mhlth)+csex+race+housize+billness,random=~1|id, corr = corAR1(,form=~day|id),data=mscm,family=binomial(link="log"))
+summary(maladie.glmmPQLlog)
+```
+```{r}
+res=signif(esticon(maladie.glmmPQLlog, L = c(0,0,1,rep(0,12),19)),3)
+res
+exp(cbind(res$estimate,confint(res)))
+```
+
+## Vérification des hypothèses
+
+### Modèle avec pente aléatoire
+```{r}
+plot(maladie.glmerpente)
+```
+```{r}
+plot(maladie.glm$x[,"day"],resid(maladie.glmerpente,type="deviance"),xlab="Jour")
+lines(lowess(maladie.glm$x[,"day"],resid(maladie.glmerpente,type="deviance")),col="red")
+```
+```{r}
+plot(maladie.glm$x[,"billness"],resid(maladie.glmerpente,type="deviance"),xlab="Jours de maladie initiaux")
+lines(lowess(maladie.glm$x[,"billness"],resid(maladie.glmerpente,type="deviance")),col="red")
+```
+```{r}
+plot(maladie.glm$x[,"bstress"],resid(maladie.glmerpente,type="pearson",xlab="Jours de stress initiaux"))
+lines(lowess(maladie.glm$x[,"bstress"],resid(maladie.glmerpente,type="pearson")),col="red")
+```
+### Modèle avec corrélation autorégressive des pseudo-résidus
+```{r}
+plot(maladie.glmmPQL)
+```
+```{r}
+plot(maladie.glm$x[,"day"],resid(maladie.glmmPQL,type="pearson"),xlab="Jour")
+lines(lowess(maladie.glm$x[,"day"],resid(maladie.glmmPQL,type="pearson")),col="red")
+```
+```{r}
+plot(maladie.glm$x[,"billness"],resid(maladie.glmmPQL,type="pearson"),xlab="Jours de maladie initiaux")
+lines(lowess(maladie.glm$x[,"billness"],resid(maladie.glmmPQL,type="pearson")),col="red")
+```
+
+```{r}
+plot(maladie.glm$x[,"bstress"],resid(maladie.glmmPQL,type="pearson"),xlab="Jours de stress initiaux")
+lines(lowess(maladie.glm$x[,"bstress"],resid(maladie.glmmPQL,type="pearson")),col="red")
+```
+
+On n'est incapable de détecter des données influentes simplement avec ces graphiques.
+
+Les conclusions vont dans la même direction qu'avec les GEEs.

@@ -1,0 +1,62 @@
+---
+title: "Analyse à 2 phases"
+output: html_notebook
+---
+
+On charge le module osDesign
+
+```{r}
+library(osDesign)
+```
+
+# Génération des données
+```{r}
+y = rep(1:0,c(90,180))
+x = rep(rep(1:0,2),c(60,30,60,120))
+u = rep(rep(c(1,NA,0,NA),4),c(21,27,8,4,12,8,4,6,20,20,9,11,36,24,24,36))
+```
+
+
+# Tableau phase 1
+```{r}
+phase1.tab = table(y,x)
+phase1.tab
+```
+
+# Tableau phase 2
+```{r}
+table(y,x,u)
+```
+
+# Extraction des données de la phase 2
+```{r}
+yy = y[!is.na(u)]
+xx = x[!is.na(u)]
+uu = u[!is.na(u)]
+```
+
+
+# nombre de témoins et de cas par strate de la phase 1
+```{r}
+nn0 = phase1.tab[1,]
+nn1 = phase1.tab[2,]
+```
+
+# Il est important que les groupes soient identifiés par des entiers >= 1
+```{r}
+gr = xx+1
+```
+
+# Estimation par méthode de pseudo-vraisemblance de Breslow et Cain
+```{r}
+model1 = tps(yy~xx+uu,nn0=nn0,nn1=nn1,group=gr,method="PL",cohort=FALSE)
+model1.resume = summary(model1)
+model1.resume$coefficients
+```
+
+# Estimation par maximum de vraisemblance (donne les mêmes résultats dans ce cas-ci)
+```{r}
+model2 = tps(yy~xx+uu,nn0=nn0,nn1=nn1,group=gr,method="ML",cohort=FALSE)
+model2.resume = summary(model2)
+model2.resume$coefficients
+```

@@ -1,0 +1,29 @@
+---
+title: "Estimation bayésienne approximative"
+output: html_notebook
+---
+Le module R *arm* offre une estimation bayésienne approximative semblable à la méthodes des pseudo-données.
+
+# Création des données
+```{r}
+xx = c(0,0,1,1)
+yy = c(0,1,0,1)
+nn = c(663,602,134,173)
+```
+
+# Analyse Bayésienne approximative
+Moyenne a priori du coefficient = 0, variance a priori du coefficient = 0.5. Le paramètre *prior.scale* correspond à l'écart-type.
+```{r}
+library(arm)
+antibio.mod = bayesglm(yy~xx,family=binomial,weights=nn,prior.scale = sqrt(0.5),prior.df=Inf)
+summary(antibio.mod)
+exp(coef(antibio.mod))
+```
+
+Moyenne a priori du coefficient = log(2)
+```{r}
+library(arm)
+antibio.mod2 = bayesglm(yy~xx,family=binomial,weights=nn,prior.mean=log(2),prior.scale = sqrt(0.5),prior.df=Inf)
+summary(antibio.mod2)
+exp(coef(antibio.mod2))
+```

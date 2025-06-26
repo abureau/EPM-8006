@@ -1,0 +1,64 @@
+---
+title: "Régression log-binomiale"
+output: html_notebook
+---
+
+#Importation des données
+
+```{r}
+chp04 = read.table("chp04.txt",header=TRUE)
+```
+Alternative: ouvrir une fenêtre pour choisir le fichier
+```{r}
+chp04 = read.table(file.choose(),header=TRUE)
+```
+
+# Recodage de variables
+```{r}
+chp04$prem01 = 2-chp04$PREM
+chp04$par0 = ifelse(chp04$PARIT==0,1,0)
+chp04$par1 = ifelse(chp04$PARIT==1,1,0)
+chp04$gest32 = pmax(chp04$GEST-32,0)
+
+table(chp04$prem01)
+```
+
+# Estimation par maximum de vraisemblance: 
+```{r}
+model1 = glm(prem01~AGE + par0 + par1 + GEST + gest32 + GEMEL + TRANSF,data=chp04,family=binomial(link="log"))
+```
+
+Problème de convergence!
+# Régression de Poisson
+
+```{r}
+model2 = glm(prem01~AGE + par0 + par1 + GEST + gest32 + GEMEL + TRANSF,data=chp04,family=poisson(link="log"))
+summary(model2)
+```
+
+# Estimation empirique de la variance
+
+La fonction *sandwich* estime la matrice de variance-covariance des estimations des coefficients d'un modèle. On présente ci-dessous les erreurs-type robustes à côté des erreurs-types obtenues de la log-vraisemblance de Poisson.
+```{r}
+library(sandwich)
+cbind(coef(summary(model2))[,1:2],sqrt(diag(sandwich(model2)))) 
+```
+On peut utiliser le même truc qu'en SAS et utiliser une procédure pour les équations d'estimation généralisées avec une seule observation par sujet
+```{r}
+library(geepack)
+model2ee = geeglm(prem01~AGE + par0 + par1 + GEST + gest32 + GEMEL + TRANSF,data=chp04,family=poisson(link="log"),id=IDN,scale.fix = T)
+summary(model2ee)
+```
+
+# Régression non-linéaire avec erreurs normales
+
+```{r}
+model3 = glm(prem01~AGE + par0 + par1 + GEST + gest32 + GEMEL + TRANSF,data=chp04,family=gaussian(link="log"),start=rep(0,8))
+summary(model3)
+```
+
+# Estimation empirique de la variance
+```{r}
+cbind(coef(summary(model3))[,1:2],sqrt(diag(sandwich(model3)))) 
+```
+

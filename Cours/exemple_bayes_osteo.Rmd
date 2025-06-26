@@ -1,0 +1,96 @@
+---
+title: "Régression bayésienne"
+output: html_notebook
+---
+
+On construit un modèle pour déterminer l'effet de la consommation de lait
+sur le risque de fracture de la hanche.
+
+Plus précisément, je vais considérer comme exposition la variable 
+BDQ229 : Consommation de lait régulière 5 fois par semaine	
+1= consommateur régulier de lait toute ma vie ou presque, y compris en enfance; 
+2= jamais été consommateur régulier de lait; 
+3= ma consommation de lait a varié au cours de ma vie, j,ai parfois été consommateur régulier de lait;
+
+et comme réponse OSQ010A (fracture de la hanche 1 = oui, 2 = non).
+
+Nous estimerons un effet conditionnel avec une approche bayésienne.
+
+#Importation des données
+
+Il faut préciser que les données manquantes sont codées par des "." avec l'option na.strings
+```{r}
+osteo = read.csv("osteo5.csv",na.strings=".")
+```
+ou
+```{r}
+osteo = read.csv(file.choose(),na.strings=".")
+```
+La fonction *MCMClogit* exige que la réponse soit codée 0/1.
+```{r}
+osteo$hanche=ifelse(osteo$OSQ010A==1,1,0)
+```
+##Définition de moyennes et variances a priori des coefficients
+```{r}
+moy.priori = c(-log(4),-log(2),rep(0,16))
+moy.priori
+var.priori = c(1,1,rep(1e6,16))
+var.priori
+```
+# Analyse Bayésienne approximative
+Le paramètre *prior.scale* correspond à l'écart-type.
+```{r}
+library(arm)
+hanche.approxmod = bayesglm(hanche~cons_reg+cons_var+OSQ130+OSQ170+OSQ200+RIAGENDR+factor(RIDRETH1)+RIDAGEYR+ALQ101+ALQ130+BMXBMI+MCQ160C+MCQ160L+WHD020+WHD110,data=osteo,family=binomial,prior.mean=moy.priori,prior.scale = sqrt(var.priori),prior.scale.for.intercept=1e6, prior.df=Inf)
+summary(hanche.approxmod)
+exp(coef(hanche.approxmod))
+```
+On calcule les bornes des intervalles de probabilité des rapports de cote.
+```{r}
+exp(cbind(coef(hanche.approxmod),"Binf"=coef(hanche.approxmod)-qnorm(0.975)*coef(summary(hanche.approxmod))[,"Std. Error"],"Bsupp"=coef(hanche.approxmod)+qnorm(0.975)*coef(summary(hanche.approxmod))[,"Std. Error"]))
+
+```
+
+# Estimation bayésienne par échantilonnage Monte Carlo de chaînes de Markov (MCMC)
+Par défaut, les fonctions du module *MCMCpack* utilisent un priori non-informatif impropre. 
+```{r}
+library(MCMCpack)
+hanche.bayesmod = MCMClogit(hanche~cons_reg+cons_var+OSQ130+OSQ170+OSQ200+RIAGENDR+factor(RIDRETH1)+RIDAGEYR+ALQ101+ALQ130+BMXBMI+MCQ160C+MCQ160L+WHD020+WHD110,data=osteo,burnin = 1000, mcmc = 100000, thin = 100, seed=331133)
+summary(hanche.bayesmod)
+```
+Graphiques de traces et de densité
+```{r}
+par(mfrow=c(2,2))
+plot(hanche.bayesmod,auto.layout = F)
+```
+
+##Définition de moyennes et variances a priori des coefficients
+Ici il faut donner aussi une moyenne et une variance pour l'ordonnée à l'origine (Intercept)
+```{r}
+moy.priori = c(0,-log(4),-log(2),rep(0,16))
+moy.priori
+var.priori = c(1e6,1,1,rep(1e6,16))
+var.priori
+```
+Il faut spécifier la précision de la loi a priori, qui est égale à l'inverse de la variance.
+```{r}
+library(MCMCpack)
+hanche.bayesmod2 = MCMClogit(hanche~cons_reg+cons_var+OSQ130+OSQ170+OSQ200+RIAGENDR+factor(RIDRETH1)+RIDAGEYR+ALQ101+ALQ130+BMXBMI+MCQ160C+MCQ160L+WHD020+WHD110,data=osteo,burnin = 1000, mcmc = 100000, thin = 100, b0=moy.priori,B0 = 1/var.priori, seed=331133)
+summary(hanche.bayesmod2)
+```
+Graphiques de traces et de densité
+```{r}
+par(mfrow=c(2,2))
+plot(hanche.bayesmod2,auto.layout = F)
+```
+On multiplie la longueur de la chaîne par 10
+```{r}
+hanche.bayesmod2b = MCMClogit(hanche~cons_reg+cons_var+OSQ130+OSQ170+OSQ200+RIAGENDR+factor(RIDRETH1)+RIDAGEYR+ALQ101+ALQ130+BMXBMI+MCQ160C+MCQ160L+WHD020+WHD110,data=osteo,burnin = 1000, mcmc = 100000, thin = 100, b0=moy.priori,B0 = 1/var.priori, seed=331133)
+summary(hanche.bayesmod2b)
+```
+
+Graphiques de traces et de densité
+```{r}
+par(mfrow=c(2,2))
+plot(hanche.bayesmod2b,auto.layout = F)
+```

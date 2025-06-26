@@ -1,0 +1,62 @@
+---
+title: "modèle logistique mixte pour statut respiratoire"
+output: html_notebook
+---
+# Lecture des données
+```{r}
+resp = read.csv("respiratoire.csv")
+```
+
+# Modèle logistique mixte 
+
+Ceci reproduit l'analyse de proc glimmix de SAS avec pseudo-vraisemblance
+```{r}
+library(MASS)
+library(nlme)
+resp$treatment = factor(resp$treatment,levels = c("P","A"))
+resp$v=factor(resp$visit,levels = c(4,1,2,3))
+resp$age2=resp$age^2
+respGLMM = glmmPQL(dichot~v*treatment+sex+age+age2+baseline,random=~1|center,corr = corAR1(,form=~visit|center/id),data=resp,family=binomial)
+summary(respGLMM)
+```
+Effet du traitement
+```{r}
+library(multcomp)
+tr = glht(respGLMM,linfct="treatmentA+0.25*v1:treatmentA+0.25*v2:treatmentA+0.25*v3:treatmentA=0")
+summary(tr)
+exp(confint(tr)$confint)
+```
+
+
+On peut aussi spécifier un effet aléatoire pour le sujet en plus d'une variance résiduelle
+```{r}
+
+respGLMM = glmmPQL(dichot~v*treatment+sex+age+baseline,random=~1|center/id,corr = corAR1(,form=~visit|center/id),data=resp,family=binomial)
+summary(respGLMM)
+```
+Effet du traitement
+```{r}
+library(multcomp)
+tr = glht(respGLMM,linfct="treatmentA+0.25*v1:treatmentA+0.25*v2:treatmentA+0.25*v3:treatmentA=0")
+summary(tr)
+exp(confint(tr)$confint)
+```
+```{r}
+plot(resp$age,residuals(respGLMM))
+lines(lowess(resp$age,residuals(respGLMM)),col="red")
+abline(h=0)
+```
+
+Analyse par maximum de vraisemblance avec approximation de Laplace
+```{r}
+library(lme4)
+respGLMM.MV = glmer(dichot~v*treatment+sex+age+baseline+(1|center/id),data=resp,family=binomial,nAGQ=1)
+summary(respGLMM.MV)
+```
+
+Effet du traitement
+```{r}
+tr = glht(respGLMM.MV,linfct="treatmentA+0.25*v1:treatmentA+0.25*v2:treatmentA+0.25*v3:treatmentA=0")
+summary(tr)
+exp(confint(tr)$confint)
+```

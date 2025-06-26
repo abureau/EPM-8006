@@ -1,0 +1,95 @@
+---
+title: "Équations d'estimation généralisées pour mesures répétées continues"
+output: html_notebook
+---
+
+# Lecture des données
+
+```{r}
+seizure = read.table("seizure.data", header = F);
+colnames(seizure) = c("ID", "Counts", "Visit", "TX", "Age", "Weeks");
+head(seizure);
+```
+Le jeu de données est dans ce qu'on appelle un format long, c'est-à-dire
+que chaque ligne représente une visite pour un sujet. C'est ce qu'il
+faut pour effectuer les analyses.
+
+# Créer un jeu de données avec les valeurs au départ placées dans des variables séparées
+```{r}
+Count0 = seizure$Counts[seizure$Visit == 0];
+ids = seizure$ID[seizure$Visit == 0];
+baseline = data.frame(ID = ids, Counts0 = Count0);
+seizure2 = merge(seizure, baseline, by = "ID");
+seizure3 = seizure2[seizure2$Visit != 0,];
+head(seizure3);
+```
+#Approche GEE
+Il y a plusieurs modules R qui implantent les équations d'estimation généralisées ou GEE. Le module *geepack* produit un objet sur lequel des fonctions de manipulation de résultats fonctionnent.
+```{r}
+library(geepack);
+modGEE.ar1 = geeglm(Counts ~ TX + Visit + TX*Visit + Counts0, data = seizure3, family = gaussian, id = ID, corstr = "ar1");
+summary(modGEE.ar1);
+```
+On remarque que les résultats diffèrent de ceux produits par proc genmod de SAS. Un autre module R qui estime des GEE est *geeM*.
+```{r}
+library(geeM)
+modGEEm.ar1 = geem(Counts ~ TX + Visit + TX*Visit + Counts0, data = seizure3, family = gaussian, id = ID, corstr = "ar1");
+summary(modGEEm.ar1);
+```
+Avec *geeM* on retrouve les mêmes estimations qu'avec proc genmod de SAS. Ceci m'incite à croire que ce sont les résultats de *geeM* qui sont corrects.
+
+On peut estimer des combinaisons linéaires et leur intervalle de confiance à partir des objets de *geeglm* avec la fonction *esticon*. Malheureusement, cette fonction ne s'applique pas aux objets produits par *geeM*. Les fonctions *confint* et *glht* que nous avons utilisées précédemment pour obtenir des intervalles de confiance et estimer des combinaisons linéaires avec des modèles linéaires ne s'appliquent ni aux objets de *geeglm*, ni aux objets de *geeM*.
+
+Nous allons appliquer *esticon* aux objets de *geeglm* pour fin d'illustration, mais les résultats peuvent être invalides. Pour obtenir des intervalles de confiance, on spécifie des combinaisons linéaires incluant chacun un coefficient (matrice diagonale):
+```{r}
+library(doBy);
+esticon(modGEE.ar1, L = diag(5));
+```
+
+# Estimation de comparaisons prédéterminées
+On spécifie successivement la réponse moyenne sous traitement à la visite 1, la réponse moyenne sous placebo à la visite 1 et la différence traitement - placebo à la visite 1.
+```{r}
+round(esticon(modGEE.ar1, L = rbind(c(1,1,1,31.22,1),
+                              c(1,0,1,31.22,0),
+                              c(0,1,0,0,1))),4);
+```
+Pour obtenir les différences entre les groupes traitement à chaque visite, on peut aussi programmer soi-même l'estimation des combinaisons linéaires (et utiliser la sortie de geeM). Notez que les valeurs de l'ordonnée à l'origine, de la variable temps (en 3e position) et du coefficient de count0 (en 4e position) sont 0 car ces variables s'annulent dans la comparaison entre les groupes de traitement.
+```{r}
+L = matrix(c(0, 1, 0, 0, 1,
+             0, 1, 0, 0, 2,
+             0, 1, 0, 0, 3,
+             0, 1, 0, 0, 4), nrow = 4, byrow = TRUE);
+LB = coef(modGEEm.ar1)%*%t(L);
+se = sqrt(diag(L%*%modGEEm.ar1$var%*%t(L)));
+LL = LB - 1.96*se;
+UL = LB + 1.96*se;
+chisq = (t(LB)/se)**2;
+pval = pchisq(chisq, df = 1, lower.tail = FALSE);
+data.frame(estimate = t(LB), se, LL = t(LL), UL = t(UL),
+           chisq, df = 1, pval);
+
+```
+
+# Approche séquentielle
+
+Comme il n'y a pas d'interaction, une 1re façon de présenter les résultats est d'estimer l'effet moyen du traitement.
+```{r}
+signif(esticon(modGEE.ar1, L = c(0,1,0,0,2.5)),3);
+```
+Une 2e façon est de retirer le terme d'interaction. Comme on n'a pas besoin de combinaisons linéaires, on va utiliser *geem* pour avoir le même résultat que proc genmod de SAS.
+```{r}
+modGEE2.ar1 = geem(Counts ~ TX + Visit + Counts0, data = seizure3, family = gaussian, id = ID, corstr = "ar1");
+summary(modGEE2.ar1);
+```
+
+
+# Graphiques de résidus en fonction de traitement et du temps
+```{r}
+plot(seizure3$TX, modGEE.ar1$residuals);
+plot(seizure3$Visit, modGEE.ar1$residuals);
+```
+Il semble y avoir des valeurs extrêmes, mais pas de problème pour la linéarité.
+
+
+
+

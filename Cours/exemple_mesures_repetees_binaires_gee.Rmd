@@ -1,0 +1,54 @@
+---
+title: "modèle logistique marginal estimé par GEE pour statut respiratoire"
+output: html_notebook
+---
+
+# Lecture des données
+```{r}
+resp = read.csv("respiratoire.csv")
+```
+
+# GEE avec centre
+Modèle logistique
+```{r}
+library(geepack)
+respGEE = geeglm(dichot~factor(visit)*treatment+sex+age+baseline+center,id=id, corstr = "ar1",data=resp,family=binomial,scale.fix=T)
+summary(respGEE)
+```
+Attention! La fonction *anova* effectue des tests d'analyse de variance de type 1. Seul le test du terme d'interaction correspond à un test de type 3, ajusté pour les autres termes du modèle.
+```{r}
+anova(respGEE)
+```
+Pour obtenir des tests de type 3, il faut plutôt utiliser la fonction *joint_tests*.
+```{r}
+library(emmeans)
+joint_tests(respGEE)
+```
+
+On peut aussi programmer les tests des combinaisons linéaire correspondant aux effets de type 3. Par exemple, pour le test de l'effet du traitement et estimation de cet effet (2e étape de l'approche séquentielle), on peut faire:
+```{r}
+library(doBy);
+tr = esticon(respGEE, L = c(0,0,0,0,-1,0,0,0,0,-0.25,-0.25,-0.25))
+tr
+exp(tr[1,1])
+```
+
+```{r}
+rPearson = resid(respGEE,type="pearson")
+plot(resp$age, rPearson,ylab="Résidus de Pearson")
+abline(h=0)
+lines(lowess(resp$age,rPearson))
+```
+```{r}
+rPearson = resid(respGEE,type="pearson")
+plot(resp$baseline, rPearson,ylab="Résidus de Pearson")
+abline(h=0)
+lines(lowess(resp$baseline,rPearson))
+```
+
+Modèle log-binomial.
+```{r}
+library(geepack)
+respGEE.log = geeglm(dichot~factor(visit)*treatment+sex+age+baseline+center,id=id, corstr = "ar1",data=resp,family=poisson(link=log),scale.fix=T)
+summary(respGEE.log)
+```

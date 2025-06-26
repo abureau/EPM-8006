@@ -1,0 +1,44 @@
+---
+title: "Régression logistique"
+output: html_notebook
+---
+
+#Importation des données
+
+```{r}
+fram1 = read.csv(file.choose())
+```
+
+#Modèle de base
+
+La fonction *summary* produit les intervalles de confiance et tests de Wald pour les coefficients
+```{r}
+reglogist = glm(DIABETES~SEX+CURSMOKE+AGE+BMI,data=fram1,family=binomial)
+summary(reglogist)
+```
+
+Affichage des rapports de cote avec intervalles de confiance de Wald et tests d'hypothèses
+```{r}
+library(epiDisplay)
+logistic.display(reglogist,decimal=3)
+```
+#Tests d'hypothèses multiples
+
+Pour tester simultanément plusieurs coefficients, il faut estimer un modèle avec et un modèle sans les coefficients à tester. La fonction *anova* produit un test du rapport de vraisemblance.
+```{r}
+reglogist2 = glm(DIABETES~SEX*CURSMOKE+AGE+BMI,data=fram1,family=binomial)
+reglogist2r = glm(DIABETES~SEX+AGE+BMI,data=fram1,family=binomial)
+anova(reglogist2r,reglogist2,test="Chi")
+```
+
+
+# Tests de combinaisons linéaires
+La fonction *glht* du module *multcomp* fait des inférence de Wald sur des combinaisons linéaires, et corrigera les valeurs p et intervalles de confiance pour la multiplicité des tests si vous testez plusieurs combinaisons linéaires. Notez qu'il faut nous même prendre l'exponentielle des intervalles des bornes des intervalles de confiance.
+```{r}
+library(multcomp)
+fnfH = glht(reglogist2,linfct="CURSMOKE + SEX:CURSMOKE=0")
+summary(fnfH)
+fnfH.IC = confint(fnfH)
+fnfH.IC
+exp(fnfH.IC$confint)
+```

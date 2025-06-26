@@ -1,0 +1,49 @@
+---
+title: "Calcul d'un score de propension"
+output: html_notebook
+---
+
+#Importation des données
+
+```{r}
+fram1 = read.csv(file.choose())
+```
+
+# Modèle de prédiction du tabagisme 
+```{r}
+fit_tabac = glm(CURSMOKE~BMI+AGE+SEX,data=fram1,family=binomial)
+summary(fit_tabac)
+```
+## Calcul des probabilités prédites de tabagisme
+```{r}
+ps = predict(fit_tabac, type = "response")
+summary(ps)
+```
+## Calcul du poids
+```{r}
+w=ifelse(fram1$CURSMOKE==1,1/ps,1/(1-ps))
+summary(w)
+sum(w)
+```
+
+## Normalisation du poids
+```{r}
+nipw = w/(mean(w))
+summary(nipw)
+sum(nipw)
+```
+## Estimation d'un rapport de cote marginal pour le tabagisme
+```{r}
+library(geepack)
+model_diabete = geeglm(DIABETES~CURSMOKE,data=fram1,family=binomial,id=RANDID,weights=nipw, scale.fix = T)
+summary(model_diabete)
+```
+```{r}
+sum.fitEE=summary(model_diabete)
+round(data.frame(RC = exp(sum.fitEE$coef[-1,1]),
+LL = exp(sum.fitEE$coef[-1,1] -
+         1.96*sum.fitEE$coef[-1,2]),
+UL = exp(sum.fitEE$coef[-1,1] +
+         1.96*sum.fitEE$coef[-1,2])),2)
+```
+

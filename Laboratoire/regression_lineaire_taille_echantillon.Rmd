@@ -1,0 +1,33 @@
+---
+title: "Calcul de taille d'échantillon pour la régression linéaire"
+output: html_notebook
+---
+
+# Importation des données de fram12
+
+```{r}
+fram12 = read.csv(file.choose())
+```
+
+# Estimation du modèle de régression linéaire:
+
+```{r}
+mod = lm(SYSBP2~CURSMOKE2+SYSBP1 + AGE1 + SEX + CURSMOKE1,data=fram12)
+summary(mod)
+```
+# Calcul de la corrélation partielle
+```{r}
+library(sensemakr)
+pr2 = partial_r2(mod,covariates = "CURSMOKE2")
+sqrt(pr2)
+```
+
+# Estimation de la taille d'échantillon
+
+Notez que la fonction *ss.SLR.rho* exige le coefficient de détermination R2 comme argument. Dans le cas d'une régression multiple, on y substitue la corrélation partielle au carré. On arrondi la corrélation partielle à 0.01.
+```{r}
+library(powerMediation)
+ss.SLR.rho(power=0.8,rho=0.01^2)
+```
+Donc la taille d'échantillon exigée est excessive avec une corrélation partielle aussi petite.
+

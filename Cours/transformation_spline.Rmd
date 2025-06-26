@@ -1,0 +1,37 @@
+---
+title: "Modèliser avec des splines"
+output: html_notebook
+---
+
+# Importation de données
+```{r}
+chp05 = read.table("chp05.txt",header=TRUE)
+```
+# Recodage de variables
+```{r}
+chp05$Y = ifelse(chp05$PDS<=2500,1,0)
+chp05$PREM[chp05$PREM>1] = 1
+```
+
+# Modélisation de l'âge avec des splines B
+```{r}
+library(splines)
+agebsp = glm(Y~bs(AGE),data=chp05,family=binomial)
+summary(agebsp)
+```
+```{r}
+pr = predict(agebsp)
+plot(chp05$AGE,pr,ylim=c(-8,2))
+```
+
+
+# Modélisation de l'âge avec des splines cubiques restreintes
+```{r}
+library(rms)
+agesp = glm(Y~rcs(AGE),data=chp05,family=binomial)
+summary(agesp)
+```
+```{r}
+pr = predict(agesp)
+plot(chp05$AGE,pr)
+```

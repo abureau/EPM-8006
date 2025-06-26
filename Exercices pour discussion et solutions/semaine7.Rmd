@@ -1,0 +1,34 @@
+---
+title: "Estimation bayésienne approximative"
+output: html_notebook
+---
+Le module R *arm* offre une estimation bayésienne approximative semblable à la méthodes des pseudo-données.
+
+# Création des données
+```{r}
+xx = c(0,0,1,1)
+yy = c(0,1,0,1)
+nn = c(624-15,15,376-10,10)
+```
+# Analyse log-binomiale par maximum de vraisemblance
+```{r}
+diabete.mod1 = glm(yy~xx,family=binomial(link="log"),weights=nn)
+summary(diabete.mod1)
+exp(coef(diabete.mod1))
+```
+# Analyse logistique par maximum de vraisemblance
+Donne presque la même chose puisque l'issue est rare.
+```{r}
+diabete.mod1l = glm(yy~xx,family=binomial,weights=nn)
+summary(diabete.mod1l)
+exp(coef(diabete.mod1l))
+```
+# Analyse Bayésienne approximative
+Moyenne a priori du coefficient = log(1.44), écart-type a priori du coefficient = 0.1. Le paramètre *prior.scale* correspond à l'écart-type. (Il faut utiliser le modèle logistique car le log-binomial échoue.)
+
+```{r}
+library(arm)
+diabete.mod2 = bayesglm(yy~xx,family=binomial,weights=nn,prior.mean=log(1.44),prior.scale = 0.1,prior.df=Inf)
+summary(diabete.mod2)
+exp(coef(diabete.mod2))
+```

@@ -1,0 +1,28 @@
+---
+title: "Régression logistique conditionnelle"
+output: html_notebook
+---
+
+#Importation des données
+
+```{r}
+pr03_04 = read.table("exm08_04.txt",header=TRUE)
+```
+Alternative: ouvrir une fenêtre pour choisir le fichier
+```{r}
+pr03_04 = read.table(file.choose(),header=TRUE)
+```
+
+# Recodage de variables
+```{r}
+pr03_04$PAR = ifelse(pr03_04$PARIT==0,1,0)
+```
+
+# Exécution de l'analyse logistique conditionnelle du statut cas/témoins
+
+```{r}
+library(survival)
+model1 = clogit(CAS~PAR+strata(STR),data=pr03_04,ties="exact")
+summary(model1)
+```
+

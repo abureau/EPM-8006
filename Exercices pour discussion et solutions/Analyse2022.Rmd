@@ -1,0 +1,430 @@
+---
+title: "Analyse du jeu de données de l'examen doctoral de biostatistique 2022"
+output: html_notebook
+---
+
+# Chargement des données
+```{r}
+load("midus_scol_STT8011.RData")
+```
+
+# Conversion au format large
+Notes: je n'inclus pas *scol* et *race* dans *idvar* à cause des valeurs manquantes.
+La conversion de *symptomes* et *stress* en facteurs est requise pour l'imputation avec *mice*.
+```{r}
+jd3$symptomes = factor(jd3$symptomes)
+jd3$stress = factor(jd3$stress)
+jd3_large = reshape(jd3,timevar="jour",idvar=c("M2ID","age","sexe"),direction="wide")
+```
+```{r}
+jd3_large$scol = jd3_large$scol.1
+jd3_large$race = jd3_large$race.1
+```
+```{r}
+names(jd3_large)
+dim(jd3_large)
+```
+
+## Relation des symptômes au jour 1 avec l'âge
+Je prends le jour 1 parce qu'il n'y a pas de données manquantes. La relation avec le log de la prévalence de symptômes est à peu près linéaire.
+```{r}
+library(mgcv)
+jd3_large$agec = jd3_large$age - mean(jd3_large$age)
+symptage = gam(symptomes.1~s(agec),data=jd3_large,family=binomial(link="log"))
+plot(symptage)
+```
+```{r}
+summary(symptage)
+```
+
+# Relation des symptômes avec les jours et la scolarité
+Ici on utlise seulement les données observées
+```{r}
+library(dplyr)
+library(ggplot2)
+dt.int.plot1 <- jd3 %>%
+  group_by(jour, scol, symptomes) %>%
+  summarise(effectif = n()) %>%
+  mutate(proportion = effectif / sum(effectif))
+dt.int.plot1 %>%
+  filter(symptomes == 1,!is.na(scol)) %>%
+  ggplot() +
+  aes(x = jour, y = proportion, colour = scol) +
+  geom_line(size = 0.5) +
+  scale_color_hue(direction = 1) +
+  labs(
+    x = "",
+    y = "",
+    color = "Scolarité",
+    title = "Fréquence de la présence d'au moins un symptôme physique en fonction des jours de suivi",
+    subtitle = "(selon les catégories de scolarité)"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(legend.position = "bottom")
+```
+
+
+# Examen des données manquantes
+
+## Symptômes (Variable réponse)
+```{r}
+jd3_large_retenu = jd3_large[,c(1:3,grep("symptomes",names(jd3_large)),grep("stress",names(jd3_large))[seq(1,15,by=2)],ncol(jd3_large)-(2:1))]
+jd3_large_reord = jd3_large_retenu[,c("M2ID",        "age",       "sexe", "scol", "race",        "symptomes.1","symptomes.2","symptomes.3","symptomes.4", "symptomes.5", "symptomes.6", "symptomes.7","symptomes.8", "stress.1",  "stress.2",    "stress.3",    "stress.4",   "stress.5",  "stress.6",  "stress.7",  "stress.8")]
+names(jd3_large_reord)
+```
+
+Répartition complets/censurés
+```{r}
+table(is.na(jd3_large$symptomes.8))
+```
+
+Examen des sujets censurés. NB: quand on demande à *mice* de laisser au moins une valeur manquante pour un sujet, il laisse toute les valeurs manquantes. Donc ici on ne peut pas retrouver un patron de valeur manquantes monotone en imputant seulement les valeurs manquantes intermittente. On reste avec ce patron de données manquantes pour ces sujets.
+```{r}
+censure = jd3_large_reord[is.na(jd3_large_reord$symptomes.8),]
+complet = jd3_large_reord[!is.na(jd3_large_reord$symptomes.8),]
+```
+```{r}
+library(VIM)
+sympt = censure[,grep("symptome",names(censure))]
+aggr(sympt[,order(names(sympt))], numbers = TRUE, prop = c(TRUE, FALSE))
+```
+```{r}
+sympt = complet[,grep("symptome",names(complet))]
+aggr(sympt[,order(names(sympt))], numbers = TRUE, prop = c(TRUE, FALSE))
+```
+
+
+## Données manquantes de scolarité et race
+```{r}
+table(is.na(jd3_large$scol),is.na(jd3_large$race),is.na(jd3_large$symptomes.8))
+```
+
+## Comparaison des sujets avec et sans scolarité manquante
+```{r}
+jd3_large$scolNA = is.na(jd3_large$scol)
+library(tableone)
+tabmiss = CreateTableOne(data=jd3_large,vars=c("age","race","sexe","symptomes.1", "stress.1"),factorVars =c("race","sexe","symptomes.1", "stress.1"),strata="scolNA")
+tabmiss
+```
+Les gens avec scolarité manquantes sont plus jeunes et plus souvent des femmes.
+
+Création d'une variable indicatrice des sujets pour lesquels la scolarité ou la race sont manquantes, pour les exclure des analyses au besoin.
+```{r}
+scolraceNA = jd3_large$M2ID[is.na(jd3_large$scol)|is.na(jd3_large$race)]
+length(scolraceNA)
+```
+# Imputation de toutes les valeurs manquantes avec MICE
+```{r}
+library(mice)
+```
+
+```{r}
+jd3_large_imp=mice(data=jd3_large_retenu,m=20,seed=98)
+```
+
+```{r}
+names(jd3_large_imp$imp)
+```
+```{r}
+jd3_large_imp$imp$scol[,1]
+```
+
+# Analyse de l'association des symptômes avec la scolarité
+## Relation avec le jour et la scolarité dans les données imputées
+```{r}
+don_par_jour = function(M2ID,scol,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8)
+{
+jd3_imp <- pivot_longer(data.frame(M2ID,scol,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8),cols = starts_with("symptomes"),
+    names_to = c(".value", "jour"),
+    names_sep = "\\.")
+jd3_imp %>%
+  group_by(jour, scol, symptomes) %>%
+  summarise(effectif = n()) %>%
+  mutate(proportion = effectif / sum(effectif))
+}
+```
+```{r}
+don_pour_graphique = with(jd3_large_imp,don_par_jour(M2ID,scol,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8))
+```
+On prend la moyenne des proportions de symptômes sur les 20 imputations
+```{r}
+mat_pour_graphique = don_pour_graphique$analyses[[1]]
+for (i in 2:20)
+{
+  mat_pour_graphique$proportion = mat_pour_graphique$proportion + don_pour_graphique$analyses[[1]]$proportion
+}
+mat_pour_graphique$proportion = mat_pour_graphique$proportion/20
+```
+```{r}
+mat_pour_graphique %>%
+  filter(symptomes == 1) %>%
+  ggplot() +
+  aes(x = jour, y = proportion, group = scol,colour = scol) +
+  geom_line(size = 0.5) +
+  scale_color_hue(direction = 1) +
+  labs(
+    x = "",
+    y = "",
+    color = "Scolarité",
+    title = "Fréquence de la présence d'au moins un symptôme physique en fonction des jours de suivi",
+    subtitle = "(selon les catégories de scolarité)"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(legend.position = "bottom")
+```
+La différence entre groupes n'est pas tout à fait constante, mais quand même pas d'évidence d'interaction avec le jour. Notons que les proportions de symptômes sont plus élevées dans les données imputées que les données avant imputation.
+
+## Examen de la corrélation
+```{r}
+symptome.cor = with(jd3_large_imp,cor(data.frame(as.numeric(symptomes.1),as.numeric(symptomes.2),as.numeric(symptomes.3),as.numeric(symptomes.4),as.numeric(symptomes.5),as.numeric(symptomes.6),as.numeric(symptomes.7),as.numeric(symptomes.8))))
+```
+Moyenne sur les 20 imputations
+```{r}
+cormat = matrix(0,8,8)
+for (i in 1:20) cormat = cormat + symptome.cor$analyses[[i]]/20
+dimnames(cormat)=NULL
+cormat
+```
+Une structure échangeable semble raisonnable
+
+## Analyse avec modèle log-binomial
+Fonction pour l'analyse
+```{r}
+library(geepack)
+library(tidyr)
+estime.mod = function(fm,M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8)
+{
+  jd3_imp <- pivot_longer(data.frame(M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8),cols = starts_with("symptomes"),
+    names_to = c(".value", "jour"),
+    names_sep = "\\.")
+    # symptomes
+   jd3_imp$symptomes <- as.integer(as.character(jd3_imp$symptomes))
+  geeglm(fm,data=jd3_imp,family=binomial(link="log"),corstr="exch",id=M2ID,scale.fix=T)
+}
+```
+```{r}
+test = with(jd3_large,estime.mod(symptomes~scol+age+sexe+race,M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8))
+```
+
+
+```{r}
+symptomes.multimod = with(jd3_large_imp,estime.mod(symptomes~scol+age+sexe+race,M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8))
+```
+
+```{r}
+symptomes.pool = pool(symptomes.multimod)
+```
+```{r}
+symptomes.pool
+```
+Tests de Wald
+```{r}
+symptomes.pool.resume = summary(symptomes.pool)
+symptomes.pool.resume
+```
+Risques relatifs et intervalles de confiance à 95%
+```{r}
+RR = signif(exp(cbind(symptomes.pool.resume$estimate,symptomes.pool.resume$estimate-qnorm(0.975)*symptomes.pool.resume$std.error,symptomes.pool.resume$estimate+qnorm(0.975)*symptomes.pool.resume$std.error)),3)
+dimnames(RR)[[1]] = symptomes.pool.resume$term
+RR
+```
+
+## Analyse Poisson robuste
+Fonction pour l'analyse
+```{r}
+estime.Poisson = function(fm,M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8)
+{
+  jd3_imp <- pivot_longer(data.frame(M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8),cols = starts_with("symptomes"),
+    names_to = c(".value", "jour"),
+    names_sep = "\\.")
+    # symptomes
+   jd3_imp$symptomes <- as.integer(as.character(jd3_imp$symptomes))
+  geeglm(fm,data=jd3_imp,family=poisson(link="log"),corstr="exch",id=M2ID,scale.fix=T)
+}
+```
+
+```{r}
+symptomes.multimod.Poisson = with(jd3_large_imp,estime.Poisson(symptomes~scol+age+sexe+race,M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8))
+```
+
+```{r}
+symptomes.Poisson.pool = pool(symptomes.multimod.Poisson)
+```
+```{r}
+symptomes.Poisson.pool
+```
+Tests de Wald
+```{r}
+symptomes.Poisson.pool.resume = summary(symptomes.Poisson.pool)
+symptomes.Poisson.pool.resume
+```
+Les résultats sont très semblables. On peut donc garder le log-binomial.
+
+Analyse avec effet du jour dans le modèle
+```{r}
+symptomes_jour.multimod = with(jd3_large_imp,estime.Poisson(symptomes~scol+age+sexe+race+factor(jour),M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8))
+```
+```{r}
+symptomes_jour.pool = pool(symptomes_jour.multimod)
+```
+```{r}
+symptomes_jour.pool
+```
+
+Tests de Wald
+```{r}
+symptomes_jour.pool.resume = summary(symptomes_jour.pool)
+symptomes_jour.pool.resume
+```
+Risques relatifs et intervalles de confiance à 95%
+```{r}
+RR = signif(exp(cbind(symptomes_jour.pool.resume$estimate,symptomes_jour.pool.resume$estimate-qnorm(0.975)*symptomes_jour.pool.resume$std.error,symptomes_jour.pool.resume$estimate+qnorm(0.975)*symptomes_jour.pool.resume$std.error)),3)
+dimnames(RR)[[1]] = symptomes_jour.pool.resume$term
+RR
+```
+
+# Imputation des données manquantes intermittentes seulement avec MICE
+*mice* ne traite pas les valeurs manquantes des sujets censurés. Vaut mieux alors
+enlever les sujets dont la scolarité et la race sont manquantes, pour éviter que des valeurs manquantes restent seulement chez les sujets censurés.
+```{r}
+jd3_large_sansscolraceNA = jd3_large_reord[!(jd3_large_reord$M2ID%in%scolraceNA),]
+```
+
+
+On retire les données manquantes par perte au suivi des données à imputer. La détermination de la perte au suivi se fait par les symptômes, mais les données à ne pas imputer sont appliquées aux symptômes et au stress. NB: en fait il suffirait de laisser les valeurs du jour 8 manquantes, car *mice* laisse toutes les valeurs manquantes d'un sujet dès qu'il y en a une seule.
+```{r}
+impmat = t(is.na(jd3_large_sansscolraceNA))
+sum(impmat)
+# Données manquantes de symptômes du jour 2 au jour 8
+impmat = apply(impmat,2,function(vec) {if(all(vec[7:13])) vec[7:13] = vec[15:21] = F; vec})
+sum(impmat)
+# Données manquantes de symptômes du jour 3 au jour 8
+impmat = apply(impmat,2,function(vec) {if(all(vec[8:13])) vec[8:13] = vec[16:21] = F; vec})
+sum(impmat)
+# Données manquantes de symptômes du jour 4 au jour 8
+impmat = apply(impmat,2,function(vec) {if(all(vec[9:13])) vec[9:13] = vec[17:21] = F; vec})
+sum(impmat)
+# Données manquantes de symptômes du jour 5 au jour 8
+impmat = apply(impmat,2,function(vec) {if(all(vec[10:13])) vec[10:13] = vec[18:21] = F; vec})
+sum(impmat)
+# Données manquantes de symptômes du jour 6 au jour 8
+impmat = apply(impmat,2,function(vec) {if(all(vec[11:13])) vec[11:13] = vec[19:21] = F; vec})
+sum(impmat)
+# Données manquantes de symptômes du jour 7 au jour 8
+impmat = apply(impmat,2,function(vec) {if(all(vec[12:13])) vec[12:13] = vec[20:21] = F; vec})
+sum(impmat)
+# Données manquantes de symptômes au jour 8
+impmat[21,impmat[13,]] = F
+impmat[13,] = F
+sum(impmat)
+```
+
+Vérification de la monotonie du patron de données manquantes de symptôme et de stress.
+```{r}
+tmp = matrix(0,nrow(jd3_large_sansscolraceNA),ncol(jd3_large_sansscolraceNA))
+tmp[!(is.na(jd3_large_sansscolraceNA)==t(impmat))] = NA
+aggr(tmp[,grep("sympt",names(jd3_large_sansscolraceNA))], numbers = TRUE, prop = c(TRUE, FALSE))
+aggr(tmp[,grep("stress",names(jd3_large_sansscolraceNA))], numbers = TRUE, prop = c(TRUE, FALSE))
+```
+
+On procède à l'imputation multiple.
+```{r}
+jd3_large_monotone=mice(data=jd3_large_sansscolraceNA,where=t(impmat),m=20,seed=98)
+```
+```{r}
+jd3_large_monotone$imp$symptomes.8[,1]
+```
+```{r}
+jd3_large_monotone$imp$symptomes.7[,1]
+```
+```{r}
+jd3_large_monotone$imp$symptomes.6[,1]
+```
+Fonction pour l'analyse
+```{r}
+library(geepack)
+library(tidyr)
+estime.mod.ipcw = function(fm,M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8, stress.1, stress.2,  stress.3,  stress.4,  stress.5,  stress.6,  stress.7, stress.8,scolraceNA)
+{
+  jd3_imp <- pivot_longer(data.frame(M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8,stress.1, stress.2,  stress.3,  stress.4,  stress.5,  stress.6,  stress.7, stress.8),cols = c(starts_with("stress"), starts_with("symptomes")),
+    names_to = c(".value", "jour"),
+    names_sep = "\\.")
+    # symptomes et stress
+   jd3_imp$symptomes <- as.integer(as.character(jd3_imp$symptomes))
+   jd3_imp$stress <- as.integer(as.character(jd3_imp$stress))
+   jd3_imp$prevy = unlist(tapply(jd3_imp$symptomes,jd3_imp$M2ID,function(vec) c(NA,vec[-length(vec)])))
+   jd3_imp$prevstress = unlist(tapply(jd3_imp$stress,jd3_imp$M2ID,function(vec) c(NA,vec[-length(vec)])))
+   # Définition d'un indicateur de valeurs manquantes et élimination d'observations inutiles
+   jd3_imp$r = ifelse(is.na(jd3_imp$symptomes),0,1)
+   jd3_imp = jd3_imp[jd3_imp$r==1 | !is.na(jd3_imp$prevy),]
+
+   # Calcul et inversion des poids
+   mod = glm(r~factor(jour) + scol*prevy + scol*prevstress,data=jd3_imp,family=binomial)
+   mod.pred <- predict(mod, type = "response")
+jd3_imp$invp = NA
+jd3_imp$invp[is.na(jd3_imp$prevy)] = 1
+jd3_imp$invp[!is.na(jd3_imp$prevy)] = 1/mod.pred
+   # Création des NIPCW
+jd3_imp$ipcw = unlist(tapply(jd3_imp$invp,jd3_imp$M2ID,cumprod))
+ord = order(jd3_imp$jour)
+jd3_imp = jd3_imp[ord,]
+jd3_imp$nipcw = unlist(tapply(jd3_imp$ipcw,jd3_imp$jour,function(vec) vec/mean(vec)))
+ord = order(jd3_imp$M2ID)
+jd3_imp = jd3_imp[ord,]
+jd3_imp_complet = jd3_imp[!(is.na(jd3_imp$symptomes)|is.na(jd3_imp$stress)),]
+#jd3_imp_complet
+  geeglm(fm,data=jd3_imp_complet,weights=nipcw, family=binomial(link="log"),corstr="exch",id=M2ID,scale.fix=T)
+}
+```
+```{r}
+symptomes.multimod.ipcw = with(jd3_large_monotone,estime.mod.ipcw(symptomes~scol+age+sexe+race,M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8,stress.1, stress.2,  stress.3,  stress.4,  stress.5,  stress.6,  stress.7, stress.8))
+```
+```{r}
+symptomes.multimod.ipcw$analyses[[1]]
+```
+
+
+```{r}
+symptomes.ipcw.pool = pool(symptomes.multimod.ipcw)
+```
+```{r}
+symptomes.ipcw.pool
+```
+Tests de Wald
+```{r}
+symptomes.ipcw.pool.resume = summary(symptomes.ipcw.pool)
+symptomes.ipcw.pool.resume
+```
+Risques relatifs et intervalles de confiance à 95%
+```{r}
+RR = signif(exp(cbind(symptomes.ipcw.pool.resume$estimate,symptomes.ipcw.pool.resume$estimate-qnorm(0.975)*symptomes.ipcw.pool.resume$std.error,symptomes.ipcw.pool.resume$estimate+qnorm(0.975)*symptomes.ipcw.pool.resume$std.error)),3)
+dimnames(RR)[[1]] = symptomes.ipcw.pool.resume$term
+RR
+```
+```{r}
+jd3_large_imp_sansscolraceNA=mice(data=jd3_large_sansscolraceNA,m=20,seed=98)
+```
+
+```{r}
+symptomes_sansscolraceNA.multimod = with(jd3_large_imp_sansscolraceNA,estime.mod(symptomes~scol+age+sexe+race,M2ID,scol,age,sexe,race,symptomes.1,symptomes.2,symptomes.3,symptomes.4,symptomes.5,symptomes.6,symptomes.7,symptomes.8))
+```
+
+```{r}
+symptomes_sansscolraceNA.pool = pool(symptomes_sansscolraceNA.multimod)
+```
+```{r}
+symptomes_sansscolraceNA.pool
+```
+
+Tests de Wald
+```{r}
+symptomes_sansscolraceNA.pool.resume = summary(symptomes_sansscolraceNA.pool)
+symptomes_sansscolraceNA.pool.resume
+```
+```{r}
+RR = signif(exp(cbind(symptomes_sansscolraceNA.pool.resume$estimate,symptomes_sansscolraceNA.pool.resume$estimate-qnorm(0.975)*symptomes_sansscolraceNA.pool.resume$std.error,symptomes_sansscolraceNA.pool.resume$estimate+qnorm(0.975)*symptomes_sansscolraceNA.pool.resume$std.error)),3)
+dimnames(RR)[[1]] = symptomes_sansscolraceNA.pool.resume$term
+RR
+```

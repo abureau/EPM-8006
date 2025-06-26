@@ -1,0 +1,93 @@
+PROC IMPORT DATAFILE = "C:\Users\etudiant\Documents\EPM-8006\donnees\osteo5.csv"
+	OUT = osteo
+	DBMS = CSV
+	REPLACE;
+RUN;
+
+proc freq data=osteo;
+table alq130*alq101;
+run;
+
+/* Il y a des valeurs manquantes de alq130 (nombre moyen de boissons alcoolisées par jour) pour des
+   sujets qui ont répondu "non" à la question alq101 (a bu au moins 12 boissons alcoolisées au cours de l'année).
+   Il ne s'agit pas de données manquantes structurelles, puisqu'on peut inférer que alq130 = 0 si alq101 = "non".
+   Il y a aussi des incohérences avec alq101 = "non" et alq130 > 0.
+   On remplit et corrige des valeurs de alq130 en supposant que alq101 est correct*/
+data osteo;
+set osteo;
+if alq101 = 2 then alq130 = 0;
+run;
+
+/*************************Approche marginale**********************************/
+
+*On va considérer consommation régulière ou variée vs jamais consommation régulière
+pour avoir une exposition binaire.;
+DATA osteo_bin;
+	SET osteo;
+	IF cons_reg = 1 OR cons_var = 1 THEN cons = 1;
+	ELSE IF cons_reg = 0 AND cons_var = 0 THEN cons = 0;
+	KEEP OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130
+		 cons SEQN OSQ010A;
+RUN;
+
+*Je fais d'abord 0 imputations, juste pour connaitre mon taux de données manquantes;
+
+PROC MI DATA = osteo_bin NIMPUTE = 0;
+	VAR  OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130
+		 cons OSQ010A;
+RUN; 
+
+PROC MI DATA = osteo_bin NIMPUTE = 20 OUT = osteo_mi SEED = 75989215;
+*PROC MI DATA = osteo_bin NIMPUTE = 3 OUT = osteo_mi SEED = 75989215;
+    CLASS OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 cons OSQ010A ALQ101;
+	VAR SEQN OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130
+		 cons OSQ010A;
+	FCS LOGISTIC(OSQ130 = OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A);
+	FCS LOGISTIC(OSQ170 = OSQ130 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A);
+	FCS LOGISTIC(OSQ200 = OSQ130 OSQ170 RIAGENDR RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A);
+	FCS LOGISTIC(RIAGENDR = OSQ130 OSQ170 OSQ200 RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A);
+	* La variable ethnicité est nominale, il faut un modèle 
+		 polytomique, spécifié avec l'option glogit;
+	FCS LOGISTIC(RIDRETH1 = OSQ130 OSQ170 OSQ200 RIAGENDR RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A / LINK = GLOGIT);
+	FCS REGPMM(RIDAGEYR = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A)  PLOTS = TRACE;
+	FCS REGPMM(BMXBMI = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR
+		  WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A)  PLOTS = TRACE;
+	FCS REGPMM(WHD020 = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR
+		  BMXBMI WHD110 ALQ101 ALQ130 cons OSQ010A) PLOTS = TRACE;
+	FCS REGPMM(WHD110 = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR
+		  BMXBMI WHD020 ALQ101 ALQ130 cons OSQ010A) PLOTS = TRACE;
+	FCS LOGISTIC(ALQ101 = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR
+		  BMXBMI WHD020 WHD110 ALQ130 cons OSQ010A);
+	FCS REGPMM(ALQ130 = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR
+		  BMXBMI WHD020 WHD110 ALQ101 cons OSQ010A) PLOTS = TRACE;
+	FCS LOGISTIC(cons = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR
+		  BMXBMI WHD020 WHD110 ALQ130 ALQ101 OSQ010A);
+	FCS LOGISTIC(OSQ010A = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR
+		  BMXBMI WHD020 WHD110 ALQ130 ALQ101 cons);
+RUN;
+
+/* On modélise la cote de fracture de la hanche (OSQ010A) */
+PROC LOGISTIC DATA = osteo_mi;
+	CLASS RIDRETH1;
+	BY _imputation_;
+	MODEL OSQ010A = cons OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130/ LINK = logit ; 
+	ODS OUTPUT ParameterEstimates=lgsparms;
+RUN;
+
+PROC MIANALYZE PARMS = lgsparms;
+	MODELEFFECTS Intercept cons OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
+		 BMXBMI WHD020 WHD110 ALQ101 ALQ130;
+RUN;
+
+
+

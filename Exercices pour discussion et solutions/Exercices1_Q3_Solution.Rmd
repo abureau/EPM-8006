@@ -1,0 +1,203 @@
+---
+title: "Solution de l'exercice 3.6"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+# Lecture des données
+```{r}
+#lalonde = read.csv("/Users/alexandrebureau/Documents/MonTravail/cours/Concepts avancés en modélisation statistique/Données/lalonde.csv")
+lalonde = read.csv(file.choose())
+```
+
+## Vérifier que l'importation s'est bien déroulée
+```{r}
+str(lalonde)
+```
+# Statistiques descriptives
+Je calcule des statistiques descriptives selon
+l'exposition. Je constate des valeurs extrêmes pour le revenu.
+
+```{r}
+library(mosaic)
+with(lalonde,tapply(re78,treat,favstats))
+with(lalonde,tapply(re75,treat,favstats))
+with(lalonde,tapply(re74,treat,favstats))
+```
+# Modélisation
+
+J'estime le modèle de régression linéaire et je vérifie les hypothèses. Notez que même si la question suggère de changer l’échelle des variables re74, re75 et re78 pour mesurer le revenu en milliers de dollars plutôt qu’en dollar, ce n'est pas essentiel car l'estimation fonctionne sans ce changement d'échelle. Les revenus sont gardés tel quels dans cette solution et dans celle en SAS.
+```{r}
+mod1 = lm(re78~treat*re74+age+educ+black+hispan+married+nodegree+re75,data=lalonde)
+summary(mod1)
+```
+1. Linéarité (et homoscédasticité par rapport aux variables quantitatives)
+
+```{r}
+library(MASS)
+plot(lalonde$age,studres(mod1))
+abline(h=0)
+lines(lowess(lalonde$age,studres(mod1)),col="red")
+```
+```{r}
+plot(lalonde$educ,studres(mod1))
+abline(h=0)
+lines(lowess(lalonde$educ,studres(mod1)),col="red")
+```
+```{r}
+plot(lalonde$re74,studres(mod1))
+abline(h=0)
+lines(lowess(lalonde$re74,studres(mod1)),col="red")
+```
+```{r}
+plot(lalonde$re75,studres(mod1))
+abline(h=0)
+lines(lowess(lalonde$re75,studres(mod1)),col="red")
+```
+2. Indépendance - ok selon nos connaissances
+
+3. Homoscédasticité
+```{r}
+plot(mod1,which=1)
+```
+```{r}
+plot(mod1,which=3)
+```
+Les résidus sont plus petits pour des valeurs prédites plus faibles, mais rien d'inquiétant dans l'ensemble.
+
+4. Normalité 
+```{r}
+plot(mod1,which=2)
+```
+Distribution légèrement asymétrique à droite, mais pas important avec notre n
+
+5. Vérification de multicollinéarité
+```{r}
+library(rms)
+vif(mod1)
+```
+Tous les VIF sont < 10, donc OK.
+
+6. Données influentes
+```{r}
+plot(mod1,which=4)
+```
+```{r}
+plot(mod1,which=5)
+```
+
+
+Je vérifie par rapport aux deux paramètres associés au traitement
+```{r}
+dfb=dfbetas(mod1)
+par(mfrow=c(1,2))
+plot(1:nrow(dfb),dfb[,"treat"])
+abline(h=0)
+plot(1:nrow(dfb),dfb[,"treat:re74"])
+abline(h=0)
+```
+Il y a une observation très influente.
+Les problèmes que j'ai constatés pourraient possiblement être tous dus à cette
+observation influente. Je décide de la retirer.
+
+```{r}
+lalonde[182,]
+lalonde2 = lalonde[-182,]
+```
+```{r}
+mod2 = lm(re78~treat*re74+age+educ+black+hispan+married+nodegree+re75,data=lalonde2)
+summary(mod2)
+```
+Je dois revérifier toutes les hypothèses...
+
+1. Linéarité (et homoscédasticité par rapport aux variables quantitatives)
+
+```{r}
+plot(lalonde2$age,studres(mod2))
+abline(h=0)
+lines(lowess(lalonde2$age,studres(mod2)),col="red")
+```
+
+```{r}
+plot(lalonde2$educ,studres(mod2))
+abline(h=0)
+lines(lowess(lalonde2$educ,studres(mod2)),col="red")
+```
+```{r}
+plot(lalonde2$re74,studres(mod2))
+abline(h=0)
+lines(lowess(lalonde2$re74,studres(mod2)),col="red")
+```
+Il semble y avoir une tendance résiduelle, mais 
+probablement en raison d'une valeur extrême.
+
+```{r}
+plot(lalonde2$re75,studres(mod2))
+abline(h=0)
+lines(lowess(lalonde2$re75,studres(mod2)),col="red")
+```
+2. Indépendance - ok selon nos connaissances
+
+3. Homoscédasticité
+```{r}
+plot(mod2,which=1)
+```
+On peut clairement voir une valeur extrême!
+
+```{r}
+plot(mod2,which=3)
+```
+Les résidus sont plus petits pour des valeurs prédites plus faibles, mais rien d'inquiétant dans l'ensemble.
+
+4. Normalité 
+```{r}
+plot(mod2,which=2)
+```
+Distribution légèrement asymétrique à droite, mais pas important avec notre n
+
+5. Vérification de multicollinéarité
+```{r}
+library(rms)
+vif(mod2)
+```
+Tous les VIF sont < 10, donc OK.
+
+6. Données influentes
+```{r}
+plot(mod2,which=4)
+```
+Je vérifie par rapport aux deux paramètres associés au traitement.
+```{r}
+dfb=dfbetas(mod2)
+par(mfrow=c(1,2))
+plot(1:nrow(dfb),dfb[,"treat"])
+abline(h=0)
+plot(1:nrow(dfb),dfb[,"treat:re74"])
+abline(h=0)
+```
+Il reste trois observations se démarquant, mais beaucoup moins qu'avant.
+
+# Test de l'effet du programme.
+
+```{r}
+mod3 = lm(re78~re74+age+educ+black+hispan+married+nodegree+re75,data=lalonde2)
+anova(mod3,mod2)
+```
+On rejette l'hypothèse nulle que le traitement est inefficace.
+
+# Explorer si et comment l’effet varie en fonction du revenu en 1974
+
+Estimation de l'effet du programme pour différents niveaux de revenu en 1974
+
+```{r}
+library(multcomp)
+effet_prog = glht(mod2,linfct=c("treat = 0", "treat + 2000*treat:re74 = 0", "treat + 5000*treat:re74 = 0"))
+confint(effet_prog)
+```
+Le traitement semble très efficace pour les gens sans revenu (différence de revenu
+en 78 = 2831\$, IC à 95%: 1226\$ à 4437\$). Pour ceux ayant un revenu de 2000$, le programme
+semble également avoir été efficace, bien que les données sont compatibles avec un effet
+négligeable du programme (différence = 1537\$, IC à 95%: 34\$ à 3040\$). Pour les gens ayant un revenu de 5000\$, les données ne permettent pas de conclure concernant l'efficacité du programme,puisqu'elles sont à la fois compatible avec un effet positif, négatif et nul du programme (différence =  -404\$, IC à 95%: -2073\$ à 1265\$).

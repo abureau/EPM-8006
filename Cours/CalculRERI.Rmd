@@ -1,0 +1,46 @@
+---
+title: "Calcul du RERI"
+output: html_notebook
+---
+#Importation des données
+
+```{r}
+fram1 = read.csv(file.choose())
+```
+# Estimation du modèle avec terme d'interaction comme sur les diapos
+On utilise la fonction *confint.lm* pour obtenir des intervalles de confiance de Wald. Utiliser *confint* tout court sur un objet *glm* va calculer des intervalles de confiance du rapport de vraisemblance. Dans le cas présent, le calcul de ces intervalles occasionne des problèmes de convergence.
+```{r}
+diabete.interact = glm(DIABETES~SEX*CURSMOKE+AGE+BMI+SYSBP+DIABP,data=fram1,family = binomial(link=log))
+summary(diabete.interact)
+signif(exp(cbind(coef(diabete.interact),confint.lm(diabete.interact))),3)
+```
+# Estimation du RERI
+
+## À partir du modèle précédent
+```{r}
+library(epiR)
+epi.interaction(diabete.interact,coef=c(2,3,8),param="product")$reri
+```
+
+# Procédure alternative avec variables indicatrices
+
+## Recodage de l'exposition et du modifiant en une variable à 4 niveaux
+```{r}
+fram1$d <- rep(NA, times = nrow(fram1))
+fram1$d[fram1$SEX == 0 & fram1$CURSMOKE == 0] <- 0
+fram1$d[fram1$SEX == 1 & fram1$CURSMOKE == 0] <- 1
+fram1$d[fram1$SEX == 0 & fram1$CURSMOKE == 1] <- 2
+fram1$d[fram1$SEX == 1 & fram1$CURSMOKE == 1] <- 3
+fram1$d <- factor(fram1$d)
+```
+##Estimation du modèle avec variable recodée des combinaisons de sexe et statut tabagique
+```{r}
+diabete.mod = glm(DIABETES~d+AGE+BMI+SYSBP+DIABP,data=fram1,family = binomial(link=log))
+summary(diabete.mod)
+signif(exp(cbind(coef(diabete.mod),confint.lm(diabete.mod))),3)
+```
+```{r}
+epi.interaction(diabete.mod,coef=2:4,param="dummy")$reri
+```
+
+

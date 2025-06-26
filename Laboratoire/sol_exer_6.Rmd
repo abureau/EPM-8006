@@ -1,0 +1,46 @@
+---
+title: "Solution exercice 6"
+output: html_notebook
+---
+
+#Importation des données
+
+```{r}
+fram1 = read.csv(file.choose())
+```
+
+##Définition de moyennes et variances a priori des coefficients
+Ici il faut donner aussi une moyenne et une variance pour l'ordonnée à l'origine (Intercept)
+```{r}
+moy.priori = c(0,log(2),rep(0,4),0.1)
+moy.priori
+var.priori = c(1e6,0.5,rep(1e6,4),0.5)
+var.priori
+```
+pour les coefficients
+```{r}
+library(MCMCpack)
+reglogist = MCMClogit(DIABETES~SEX+AGE+SYSBP+CURSMOKE*BMI,data=fram1,burnin = 1000, mcmc = 10000, thin = 10, b0=moy.priori,B0 = 1/var.priori, seed=331133)
+summary(reglogist)
+```
+
+Graphiques de traces et de densité
+```{r}
+par(mfrow=c(2,2))
+plot(reglogist,auto.layout = F)
+```
+```{r}
+par(mfrow=c(2,2))
+autocorr.plot(reglogist,lag.max=20,auto.layout = F)
+```
+ les graphiques de trace commencent après le burn-in.
+Sur les graphiques de trace, on ne constate aucune tendance particulière.
+Le paramètre de burn-in semble donc suffisant.
+
+Les graphiques d'auto-corrélation n'incluent pas d'intervalles de confiance.
+On constate tout de même que l'auto-corrélation se rapproche toujours très 
+rapidement de 0. Il ne semble donc pas y avoir de problème à garder 1/10.
+
+Le nombre d'échantillons conservé est de 10 000/10 = 1000, ce qui est suffisant.
+
+Les paramètres de l'algorithme semblent donc appropriés.
