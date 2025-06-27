@@ -1,0 +1,76 @@
+---
+title: "Intervalle de confiance bootstrap pour le RERI"
+output: html_notebook
+---
+
+# Fonction d'analyse
+Il faut définir une fonction qui calcule le RERI en prenant un premier argument *data* et un deuxième argument qui peut prendre différentes formes. L'option par défaut est un vecteur d'indices définissant un échantillon bootstrap.
+```{r}
+library(epiR)
+RERI = function(data,indices)
+{
+  bd<-data[indices,]
+  diabete.mod = glm(DIABETES~SEX*CURSMOKE+AGE+BMI+SYSBP+DIABP,data=bd,family = poisson(link=log))
+  # Ici on doit retourner seulement l'estimation du RERI
+epi.interaction(diabete.mod,coef=c(2,3,8),param="product")$reri$est
+}
+```
+Une autre option est que le deuxième argument soit un poids pour chaque observation (qui prend les valeurs 0, 1/n, 2/n, ... selon le nombre de fois où l'observation se retrouve dans l'échantillon bootstrap)
+```{r}
+RERIw = function(data,weights)
+{
+  diabete.mod = glm(DIABETES~SEX*CURSMOKE+AGE+BMI+SYSBP+DIABP,data=data,weights=weights,family = poisson(link=log))
+  # Ici on doit retourner seulement l'estimation du RERI
+epi.interaction(diabete.mod,coef=c(2,3,8),param="product")$reri$est
+}
+```
+#Importation des données
+
+```{r}
+fram1 = read.csv(file.choose())
+```
+
+# Test des fonctions RERI et RERIw
+```{r}
+RERI(fram1,indices=1:nrow(fram1))
+RERIw(fram1,weights=rep(1,nrow(fram1)))
+```
+
+# Exécution du bootstrap avec calcul du RERI
+
+On spécifie 1000 échantillons bootstrap. L'argument *stype="i"* précise que la fonction *boot* doit passer les indices des observations appartenant à un échantillon bootstrap à notre fonction appelée ici *RERI*. C'est l'option par défaut.
+```{r}
+library(boot)
+set.seed(1001)
+RERIsexe_tabac.boot = boot(fram1,RERI,R=1000,stype="i")
+RERIsexe_tabac.boot
+```
+On peut aussi spécifier *stype="w"* pour utiliser la fonction *RERIw*.
+```{r}
+library(boot)
+set.seed(1001)
+RERIsexe_tabac.bootw = boot(fram1,RERIw,R=1000,stype="w")
+RERIsexe_tabac.bootw
+```
+# Examen de la distribution du RERI
+```{r}
+hist(RERIsexe_tabac.boot$t)
+```
+
+
+On calcule divers types d'intervalles de confiance bootstrap avec la fonction *boot.ci*.
+```{r}
+RERIsexe_tabac.IC = boot.ci(RERIsexe_tabac.boot,index=1,type="perc")
+RERIsexe_tabac.IC
+```
+Le calcul de l'intervalle BCa échoue sur l'objet obtenu avec la fonction qui prend les indices des observations.
+```{r}
+RERIsexe_tabac.IC = boot.ci(RERIsexe_tabac.boot,index=1,type="bca")
+RERIsexe_tabac.IC
+```
+Par contre, le calcul devrait réussir sur l'objet obtenu avec la fonction qui prend des poids (à revoir).
+```{r}
+RERIsexe_tabac.IC = boot.ci(RERIsexe_tabac.bootw,index=1,type="bca")
+RERIsexe_tabac.IC
+```
+

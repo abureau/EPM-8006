@@ -1,0 +1,49 @@
+---
+title: "Modèle prédictif du diabète"
+output: html_notebook
+---
+
+#Importation des données
+
+```{r}
+fram12 = read.csv(file.choose())
+```
+
+# Exclusion des cas prévalents de diabete au temps 1
+```{r}
+fram12b = fram12[fram12$DIABETES1==0,c("DIABETES2","SEX","BMI1","AGE1","GLUCOSE1")]
+```
+
+# Estimation du modèle prédictif et calcul des scores et probabilités prédites
+```{r}
+diabete.mod = glm(DIABETES2~AGE1+SEX+BMI1+GLUCOSE1,data=fram12b,family=binomial)
+summary(diabete.mod)
+diabete.score = predict(diabete.mod)
+diabete.pred = predict(diabete.mod,type="response")
+cbind(fram12b,diabete.score,diabete.pred)[1:10,]
+```
+
+# Affichage de la courbe ROC et calcul de l'aire sous la courbe
+
+Le module *ROC* provient du dépôt du projet Bioconductor. Si l'installation avec "l'installateur de packages" échoue, vous pouvez exécuter les instructions suivantes pour l'installer à l'aide du module *BiocManager*.
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("ROC")
+```
+
+```{r}
+library(ROC)
+ROCd <- rocdemo.sca(fram12b$DIABETES2,diabete.pred,dxrule.sca,caseLabel="Diabete",markerLabel="")
+plot(ROCd)
+abline(0,1)
+```
+```{r}
+cbind(ROCd@cuts,ROCd@sens,ROCd@spec)[seq(1,2801,by=100),]
+```
+
+```{r}
+AUC(ROCd)
+```
+

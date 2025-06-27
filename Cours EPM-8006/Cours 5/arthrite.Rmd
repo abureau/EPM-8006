@@ -1,0 +1,46 @@
+---
+title: "Régression ordinale d'une mesure d'un score d'arthrite"
+output: html_notebook
+---
+
+#Lecture des données
+
+```{r}
+library(foreign)
+ds <- read.dta("arthritis.dta")
+head(ds)
+```
+## On exprime l'âge en décennies
+```{r}
+ds$age = ds$age/10
+```
+
+
+#Analyse des mesures à 6 mois
+
+Analyse avec la fonction *polr*
+```{r}
+library(MASS)
+model1 <- polr(factor(y4) ~ age + trt,data=ds)
+summary(model1)
+```
+
+##Affichage des rapports de cote et intervalles de confiance
+```{r}
+exp(cbind(coef(model1),confint(model1)))
+```
+
+Analyse avec la fonction *lrm*
+```{r}
+library(rms)
+model1.lrm <- lrm(y4 ~ age + trt,data=ds)
+model1.lrm
+```
+##Affichage des cotes, rapports de cote et intervalles de confiance
+Pas de fonction *confint*. Il faut le programmer soi-même.
+```{r}
+et=sqrt(diag(model1.lrm$var))
+exp(cbind(coef(model1.lrm),coef(model1.lrm)-qnorm(0.975)*et,coef(model1.lrm)+qnorm(0.975)*et))
+```
+
+

@@ -1,0 +1,99 @@
+---
+title: "Régression polytomique"
+output: html_notebook
+---
+
+# Importation des données
+
+```{r}
+chp05 = read.table("chp05.txt",header=TRUE)
+```
+
+## Définition de la variable réponse trichotomique
+```{r}
+chp05$Y = unclass(cut(chp05$PDS,breaks=c(0,2000,2500,5000)))
+table(chp05$Y)
+```
+# Estimation du modèle polytomique
+## Avec le module mlogit
+```{r}
+library(mlogit)
+ds.mlogit = dfidx(data = chp05, shape = "wide",
+                        choice = "Y", varying = NULL, idvar = ID);
+fit = mlogit(Y ~ 1 | FUME + PREM, data = ds.mlogit,reflevel = 3);
+summary(fit)
+```
+
+## Avec la fonction multinom
+```{r}
+library(MASS)
+model1 <- multinom(Y ~ FUME + PREM,data=chp05)
+summary(model1)
+```
+Affichage des rapports de cote avec intervalles de confiance de Wald et tests d'hypothèses
+```{r}
+library(epiDisplay)
+mlogit.display(model1)
+```
+
+# Calcul de score de propension pour la scolarité
+
+## Définition de la variable réponse dichotomique
+```{r}
+chp05$Y = ifelse(chp05$PDS<=2500,1,0)
+table(chp05$Y)
+```
+## Modèle de prédiction de la scolarité
+```{r}
+ds.mlogit = dfidx(data = chp05, shape = "wide",
+                        choice = "SCOL", varying = NULL, idvar = ID);
+fit = mlogit(SCOL ~ 1 | FUME + AGE + PDSM, data = ds.mlogit,reflevel = 3);
+summary(fit)
+```
+
+## Calcul des probabilités prédites de scolarité
+```{r}
+ps = data.frame(predict(fit, type = "probs", newdata = ds.mlogit));
+ps = ps[order(chp05$ID),];
+```
+
+# Calcul du poids
+```{r}
+chp05$SCOL = factor(chp05$SCOL,levels=c(3,1,2))
+Indicator = matrix(NA, nrow = nrow(chp05), ncol = nlevels(chp05$SCOL)); 
+for(i in 1:nlevels(factor(chp05$SCOL))){
+  Indicator[,i] = (chp05$SCOL == levels(chp05$SCOL)[i]);
+}
+w = rowSums(Indicator/ps);
+summary(w)
+```
+## Normalisation du poids
+```{r}
+nipw = w/(sum(w)/nrow(chp05))
+summary(nipw)
+sum(nipw)
+```
+# Estimation du rapport de cote marginal
+```{r}
+library(geepack)
+fit.marginal = geeglm(Y~SCOL,data=chp05,family=binomial,id=ID,weights=nipw, scale.fix = T)
+summary(fit.marginal)
+```
+```{r}
+sum.fitEE=summary(fit.marginal)
+round(data.frame(RP = exp(sum.fitEE$coef[-1,1]),
+LL = exp(sum.fitEE$coef[-1,1] -
+         1.96*sum.fitEE$coef[-1,2]),
+UL = exp(sum.fitEE$coef[-1,1] +
+         1.96*sum.fitEE$coef[-1,2])),2)
+```
+## Comparaison avec un RC conditionel
+```{r}
+fit.cond = glm(Y~SCOL+FUME+AGE+PDSM,data=chp05,family=binomial)
+summary(fit.cond)
+```
+```{r}
+library(epiDisplay)
+logistic.display(fit.cond, decimal = 2)
+```
+
