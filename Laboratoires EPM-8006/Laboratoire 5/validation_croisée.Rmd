@@ -1,0 +1,105 @@
+---
+title: "Validation croisée"
+output: html_notebook
+---
+# Lecture du jeu de données
+```{r}
+chp09 <- read.csv("chp09.csv")
+```
+
+Alternative: ouvrir une fenêtre pour choisir le fichier
+```{r}
+chp09 = read.csv(file.choose(),header=TRUE)
+```
+
+# Recodage d'une variable
+```{r}
+chp09$coma <- ifelse(chp09$CONS==0,0,1)
+```
+
+# Permutation aléatoire des données
+```{r}
+set.seed(99)
+N <- nrow(chp09)
+chp09.permut <- chp09[sample(1:N,replace=F),]
+```
+
+# Initialisation des scores pour les 5 modèles à comparer
+```{r}
+mod1.pred <- numeric(N)
+mod2.pred <- numeric(N)
+mod3.pred <- numeric(N)
+mod4.pred <- numeric(N)
+mod5.pred <- numeric(N)
+```
+# Calcul des scores individuels par validation croisée
+
+Boucle principale sur les H séparations de la base de données en échantillons d'entraînement (ech1) et de validation (ech2). Les 5 modèles à comparer sont estimés à chaque itération. Les scores sont obtenus avec la fonction *predict* en précisant le jeu de données de vérification avec l'option *newdata*.
+```{r}
+H <- 5
+for (h in 1:H)
+  {
+    cat ("Jeu de vérification ",h,"\n")
+valid <- ((h-1)*N/H+1):(h*N/H)
+ech1 <- chp09.permut[!((1:N)%in%valid),]
+ech2 <- chp09.permut[valid,]
+
+mod1 <- glm(DECES~coma,data=ech1,family=binomial)
+mod1.pred[valid] <- predict(mod1,newdata=ech2)
+
+mod2 <- glm(DECES~coma+AGE,data=ech1,family=binomial)
+mod2.pred[valid] <- predict(mod2,newdata=ech2)
+
+mod3 <- glm(DECES~coma+AGE+SOIN,data=ech1,family=binomial)
+mod3.pred[valid] <- predict(mod3,newdata=ech2)
+
+mod4 <- glm(DECES~coma+AGE+SOIN+SYS,data=ech1,family=binomial)
+mod4.pred[valid] <- predict(mod4,newdata=ech2)
+
+mod5 <- glm(DECES~coma+AGE+SOIN+SYS+ADM_HIS,data=ech1,family=binomial)
+mod5.pred[valid] <- predict(mod5,newdata=ech2)
+  }
+
+```
+
+# Calcul de la courbe ROC pour chacun des 5 modèles à partir des prédictions sur les jeux de validation
+
+Le module *ROC* provient du dépôt du projet Bioconductor. Si l'installation avec "l'installateur de packages" échoue, vous pouvez exécuter les instructions suivantes pour l'installer à l'aide du module *BiocManager*.
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("ROC")
+```
+Lorsque le module *ROC* est installé, il suffit de le charger comme d'habitude.
+```{r}
+library(ROC)
+ROC1 <- rocdemo.sca(chp09.permut$DECES,mod1.pred,dxrule.sca,caseLabel="Décès",markerLabel="")
+ROC2 <- rocdemo.sca(chp09.permut$DECES,mod2.pred,dxrule.sca,caseLabel="Décès",markerLabel="")
+ROC3 <- rocdemo.sca(chp09.permut$DECES,mod3.pred,dxrule.sca,caseLabel="Décès",markerLabel="")
+ROC4 <- rocdemo.sca(chp09.permut$DECES,mod4.pred,dxrule.sca,caseLabel="Décès",markerLabel="")
+ROC5 <- rocdemo.sca(chp09.permut$DECES,mod5.pred,dxrule.sca,caseLabel="Décès",markerLabel="")
+```
+# Affichage des courbes ROC
+```{r}
+plot(ROC1)
+lines(ROC2,lty=2)
+lines(ROC3,lty=3)
+lines(ROC4,lty=4)
+lines(ROC5,lty=5)
+legend(0.6,0.5,c("Modèle 1","Modèle 2","Modèle 3","Modèle 4","Modèle 5"),lty=1:5)
+```
+
+# Calcul de l'aire sous la courbe ROC
+```{r}
+AUC(ROC1)
+AUC(ROC2)
+AUC(ROC3)
+AUC(ROC4)
+AUC(ROC5)
+```
+# Points de coupure sur l'échelle des probabilités dans le modèle 3
+```{r}
+cbind(1/(1+exp(-ROC3@cuts)),ROC3@spec,ROC3@sens)
+```
+
