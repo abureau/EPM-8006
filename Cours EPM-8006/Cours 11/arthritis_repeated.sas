@@ -1,5 +1,5 @@
 data arthritis;
-     infile 'arthritis.txt';
+     infile '/workspaces/workspace/Données EPM-8006/Farthritis.txt';
      input id trt age y1 y2 y3 y4;
 
 data arthritis;
@@ -29,7 +29,7 @@ proc genmod des;
 	 estimate "trt" trt 1 trt*sqrtmonth 2 / exp;	 
 run;
 
-/* Analyse conditionnelle pas support�e */
+/* Analyse conditionnelle pas supportée */
 proc logistic;
  model y =  sqrtmonth ;
  strata id;
