@@ -3,65 +3,65 @@
 ***************************************/
 
 
-*Importation des données;
+*Importation des donnÃ©es;
 DATA milk;
-	INFILE "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2014\Données\milk.data";
+	INFILE "/workspaces/workspace/DonnÃ©es EPM-8006/milk.data";
 	INPUT diet cow week protein;
 RUN;
 
 
-*Vérifier que l'importation s'est bien déroulée;
+*VÃ©rifier que l'importation s'est bien dÃ©roulÃ©e;
 PROC CONTENTS DATA = milk VARNUM; RUN;
 
 PROC PRINT DATA = milk (OBS = 20); RUN;
 
 *Statistiques descriptives;
 
-*Je trace les courbes pour quelques vaches choisies "aléatoirement";
-*L'objectif est de regarder la forme des données sans surcharger le
+*Je trace les courbes pour quelques vaches choisies "alÃ©atoirement";
+*L'objectif est de regarder la forme des donnÃ©es sans surcharger le
 graphique;
-*Il s'agit d'un graphique que je fais pour moi, je ne l'insérerais
+*Il s'agit d'un graphique que je fais pour moi, je ne l'insÃ©rerais
 probablement pas dans un article;
 PROC SGPLOT DATA = milk;
 	WHERE cow in(1, 10, 20, 30, 40, 50, 60, 70);
 	SERIES X = week Y = protein / GROUP = cow;
 RUN;
 
-*Je trace les courbes lissées pour chaque diète;
+*Je trace les courbes lissÃ©es pour chaque diÃ¨te;
 *J'aurais aussi pu relier entre elles les moyennes
-calculées avec PROC MEANS tel que je l'avais fait
-dans l'exemple sur les données seizure;
+calculÃ©es avec PROC MEANS tel que je l'avais fait
+dans l'exemple sur les donnÃ©es seizure;
 PROC SGPANEL DATA = milk;
 	PANELBY diet;
 	SERIES X = week Y = protein / GROUP = COW;
 	LOESS X = week Y = protein;
 RUN; 
-*Je constate qu'il y a beaucoup de variabilité entre
-les niveaux de protéines pour les vaches d'une même diète.
-Je constate aussi que la relation n'est pas linéaire;
-*Le graphique est un peu surchargé avec les courbes de toutes
+*Je constate qu'il y a beaucoup de variabilitÃ© entre
+les niveaux de protÃ©ines pour les vaches d'une mÃªme diÃ¨te.
+Je constate aussi que la relation n'est pas linÃ©aire;
+*Le graphique est un peu surchargÃ© avec les courbes de toutes
 les vaches...;
 
-*Le graphique suivant est moins chargé;
+*Le graphique suivant est moins chargÃ©;
 PROC SGPANEL DATA = milk;
 	PANELBY diet;
 	LOESS X = week Y = protein;
 RUN; 
-*Dans tous les cas, la quantité de protéine chute rapidement au début, puis
-reste relativement stable ou augmente selon la diète.
-On devrait exclure l'idée de modéliser une tendance linéaire.
-On pourrait utiliser du linéaire par morceau ou modéliser la relation
-en considérant les semaines de façon catégorique;
+*Dans tous les cas, la quantitÃ© de protÃ©ine chute rapidement au dÃ©but, puis
+reste relativement stable ou augmente selon la diÃ¨te.
+On devrait exclure l'idÃ©e de modÃ©liser une tendance linÃ©aire.
+On pourrait utiliser du linÃ©aire par morceau ou modÃ©liser la relation
+en considÃ©rant les semaines de faÃ§on catÃ©gorique;
 
 
-*Moyennes et médianne par semaine par diète.;
+*Moyennes et mÃ©dianne par semaine par diÃ¨te.;
 PROC TABULATE DATA = milk;
 	CLASS diet week;
 	VAR protein;
 	TABLE diet, week*protein = ""*(MEAN = "Moy" MEDIAN = "Med");
 RUN;
 
-*Juste moyennes, car moyennes et médianes similaires.;
+*Juste moyennes, car moyennes et mÃ©dianes similaires.;
 PROC TABULATE DATA = milk;
 	CLASS diet week;
 	VAR protein;
@@ -79,37 +79,37 @@ RUN;
 PROC SGPLOT DATA = moy;
 	SERIES X = week Y = m_protein / GROUP = diet;
 RUN;
-*Le pic le plus bas est obtenu environ à la 4e semaine;
+*Le pic le plus bas est obtenu environ Ã  la 4e semaine;
 
-/*Puisque j'ai constaté que la relation est non linéaire, j'ai
-décidé d'inclure week dans l'énoncé CLASS (création d'une indicatrice
+/*Puisque j'ai constatÃ© que la relation est non linÃ©aire, j'ai
+dÃ©cidÃ© d'inclure week dans l'Ã©noncÃ© CLASS (crÃ©ation d'une indicatrice
 pour chaque semaine).
-Puisqu'il s'agit de données continues, j'utilise une distribution de travail normale.
-Puisqu'il s'agit de données répétées, j'utilise une matrice de travail autorégressive
+Puisqu'il s'agit de donnÃ©es continues, j'utilise une distribution de travail normale.
+Puisqu'il s'agit de donnÃ©es rÃ©pÃ©tÃ©es, j'utilise une matrice de travail autorÃ©gressive
 d'ordre 1 (AR(1)).
-Étant donné l'énoncé de la question qui est plutôt vague, il pourrait semblé
-approprié d'utiliser une approche séquentielle pour analyser les données,
-c'est-à-dire de d'abord tester si l'effet de la diète varie dans le temps.
-Si on constate que oui, on devra comparer les diètes pour chaque semaine.
-Si on constate que non, on pourra comparer la moyenne des diètes pour
-toutes les semaines combinées.*/
+Ã‰tant donnÃ© l'Ã©noncÃ© de la question qui est plutÃ´t vague, il pourrait semblÃ©
+appropriÃ© d'utiliser une approche sÃ©quentielle pour analyser les donnÃ©es,
+c'est-Ã -dire de d'abord tester si l'effet de la diÃ¨te varie dans le temps.
+Si on constate que oui, on devra comparer les diÃ¨tes pour chaque semaine.
+Si on constate que non, on pourra comparer la moyenne des diÃ¨tes pour
+toutes les semaines combinÃ©es.*/
 /*Je trie les observations en ordre chronologique*/
 PROC SORT DATA = milk; BY cow week; RUN;
 PROC GENMOD DATA = milk;
 	CLASS cow diet week;
 	MODEL protein = diet|week / LINK = ID DIST = normal TYPE3 WALD; *J'utilise les options TYPE3 et WALD pour
 										obtenir un tableau d'analyse de la variance. Je tableau me donne le
-										résultat du test d'hypothèses simultanées sur les paramètres d'interaction.;
-	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble approprié dans ce cas;
+										rÃ©sultat du test d'hypothÃ¨ses simultanÃ©es sur les paramÃ¨tres d'interaction.;
+	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble appropriÃ© dans ce cas;
 	SLICE diet*week / DIFF SLICEBY = week;
 	OUTPUT OUT = resid DFBETA = _all_  resraw = resid COOKSD = cook;
 RUN;
-*Les tests de types 3 nous indiquent que l'effet de la diète varie dans le temps
+*Les tests de types 3 nous indiquent que l'effet de la diÃ¨te varie dans le temps
 (diet*week 36 74.38 0.0002). Je dois donc comparer mes moyennes entre elles pour
-chaque semaine. Pour ce faire, j'utilise l'énoncé SLICE.;
-*Puisqu'on est dans un contexte explicatif, l'idéal serait de faire sortir les
-dfbetas pour diagnostiquer les données influentes, mais il y a beaucoup
-de paramètres... Je vais plutôt regarder le distances de Cook et les résidus.;
+chaque semaine. Pour ce faire, j'utilise l'Ã©noncÃ© SLICE.;
+*Puisqu'on est dans un contexte explicatif, l'idÃ©al serait de faire sortir les
+dfbetas pour diagnostiquer les donnÃ©es influentes, mais il y a beaucoup
+de paramÃ¨tres... Je vais plutÃ´t regarder le distances de Cook et les rÃ©sidus.;
 
 
 PROC BOXPLOT DATA = resid;
@@ -120,54 +120,54 @@ PROC SORT DATA = resid; BY week; RUN;
 PROC BOXPLOT DATA = resid;
 	PLOT resid*week / BOXSTYLE = SCHEMATIC;
 RUN; QUIT;
-*Les résidus semblent corrects;
+*Les rÃ©sidus semblent corrects;
 
-/*Je crée un identifiant unique pour
+/*Je crÃ©e un identifiant unique pour
 faire un graphique pour les distances de Cook.*/
 DATA resid2;
 	SET resid;
 	id + 1;
 RUN;
 
-*Données influentes ou extrêmes;
+*DonnÃ©es influentes ou extrÃªmes;
 PROC SORT DATA = resid; BY DESCENDING cook; RUN;
 PROC PRINT DATA = resid (OBS = 20); VAR cook cow week diet protein resid; RUN;
 PROC SGPLOT DATA = resid2;
 	NEEDLE X = id Y = cook;
 RUN;
-*Il ne semble pas y avoir de données influentes;
+*Il ne semble pas y avoir de donnÃ©es influentes;
 
-/*Interprétation: 
-Nos analyses indiquent que le contenu en protéines du lait de vache varie en fonction de la diète et du temps
-écoulé depuis le vêlage. De plus, il semble que l'effet des diètes varie dans le temps. Le contenu en protéines du lait
-a ainsi été comparé entre les diètes à chaque semaine. Les résultats obtenus pour ces analyses démontrent
-la supériorité de la diète à l'orge par rapport à la diète au lupin. En effet, le contenu en protéine du lait des vaches
-nourries à l'orge est supérieur à celui des vaches nourries au lupin pour les semaines 2, 3, 5 ainsi que 7 à 19.
-Les comparaisons par semaine de la diète à l'orge vs la diète mélangée ou de la diète mélangée vs la diète au lupin
-sont cependant plus nuancées en raison d'un manque de puissance statistique.*/
+/*InterprÃ©tation: 
+Nos analyses indiquent que le contenu en protÃ©ines du lait de vache varie en fonction de la diÃ¨te et du temps
+Ã©coulÃ© depuis le vÃªlage. De plus, il semble que l'effet des diÃ¨tes varie dans le temps. Le contenu en protÃ©ines du lait
+a ainsi Ã©tÃ© comparÃ© entre les diÃ¨tes Ã  chaque semaine. Les rÃ©sultats obtenus pour ces analyses dÃ©montrent
+la supÃ©rioritÃ© de la diÃ¨te Ã  l'orge par rapport Ã  la diÃ¨te au lupin. En effet, le contenu en protÃ©ine du lait des vaches
+nourries Ã  l'orge est supÃ©rieur Ã  celui des vaches nourries au lupin pour les semaines 2, 3, 5 ainsi que 7 Ã  19.
+Les comparaisons par semaine de la diÃ¨te Ã  l'orge vs la diÃ¨te mÃ©langÃ©e ou de la diÃ¨te mÃ©langÃ©e vs la diÃ¨te au lupin
+sont cependant plus nuancÃ©es en raison d'un manque de puissance statistique.*/
 
 
 
-/**********Approche de régressoin par morceau - plus avancé***************/
-/*Cette partie de programme n'est donnée qu'à titre informatif.*/
-/*On va ajuster un modèle de Y en fonction de diet et de week
-où on va supposer une relation linéaire par morceau entre diet*week et
-Y. Un première pente correspondra à la relation pour week = 1 jusqu'à week = 4,
-l'autre pente correspondra à la relation pour week = 5 à week = 19.
+/**********Approche de rÃ©gressoin par morceau - plus avancÃ©***************/
+/*Cette partie de programme n'est donnÃ©e qu'Ã  titre informatif.*/
+/*On va ajuster un modÃ¨le de Y en fonction de diet et de week
+oÃ¹ on va supposer une relation linÃ©aire par morceau entre diet*week et
+Y. Un premiÃ¨re pente correspondra Ã  la relation pour week = 1 jusqu'Ã  week = 4,
+l'autre pente correspondra Ã  la relation pour week = 5 Ã  week = 19.
 
-Mathématiquement, le modèle a la forme suivante :
+MathÃ©matiquement, le modÃ¨le a la forme suivante :
 E[Y|diet, week]  = b0 + b1*week + b2*diet_1 + b3*diete_2 + b4*diet_1*week + b5*diet_2*week
 					+ b6*max(0, week - 4) + b7*diet_1*max(0, week - 4) + b8*diet_2*max(0, week - 4).
 
-Ici, b6 à b8 permettent de représenter le changement dans la pente de Y après la 4e semaine
-pour chacune des diètes. En effet, remarquez que pour les semaines 1 à 4, b6, b7 et b8 seront
-tous multipliés par 0, car max(0, week - 4) = 0. Ainsi, par exemple, la pente de Y en fonction
-de week pour la diète 1 pour ces semaines sera b1 + b4 (pour la diète 1 et pour les semaines 1 à 4,
-lorsque week augmente de 1 unité, Y augmente en moyenne de b1 + b4).
-Pour les semaines suivantes, la pente associée à la diète 1 sera plutôt de b1 + b4 + b6 + b7.
-Ainsi, b6 + b7 correspondent au changement de pente pour ces diètes.*/ 
+Ici, b6 Ã  b8 permettent de reprÃ©senter le changement dans la pente de Y aprÃ¨s la 4e semaine
+pour chacune des diÃ¨tes. En effet, remarquez que pour les semaines 1 Ã  4, b6, b7 et b8 seront
+tous multipliÃ©s par 0, car max(0, week - 4) = 0. Ainsi, par exemple, la pente de Y en fonction
+de week pour la diÃ¨te 1 pour ces semaines sera b1 + b4 (pour la diÃ¨te 1 et pour les semaines 1 Ã  4,
+lorsque week augmente de 1 unitÃ©, Y augmente en moyenne de b1 + b4).
+Pour les semaines suivantes, la pente associÃ©e Ã  la diÃ¨te 1 sera plutÃ´t de b1 + b4 + b6 + b7.
+Ainsi, b6 + b7 correspondent au changement de pente pour ces diÃ¨tes.*/ 
 
-/*On va devoir d'abord créer la nouvelle variable pour max(0, week - 4)*/
+/*On va devoir d'abord crÃ©er la nouvelle variable pour max(0, week - 4)*/
 
 DATA milk2;
 	SET milk;
@@ -178,17 +178,17 @@ PROC SORT DATA = milk2; BY cow week; RUN;
 PROC GENMOD DATA = milk2;
 	CLASS cow diet / PARAM = REF; /*Plus facile de construire des contrastes avec PARAM = REF!*/
 	MODEL protein = diet week diet*week max4 diet*max4 / LINK = ID DIST = normal TYPE3 WALD;
-	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble approprié dans ce cas;
+	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble appropriÃ© dans ce cas;
 	OUTPUT OUT = resid DFBETA = _all_  resraw = resid COOKSD = cook P = predit;
-	/*Est-ce que l'effet de la diète varie dans le temps ?*/
+	/*Est-ce que l'effet de la diÃ¨te varie dans le temps ?*/
 	CONTRAST "Interaction week*diet" week*diet 1 0, week*diet 0 1, diet*max4 1 0, diet*max4 0 1 / WALD;
-	/*La pente change-t-elle après la semaine 4?*/
+	/*La pente change-t-elle aprÃ¨s la semaine 4?*/
 	CONTRAST "Changement de pente" max4 1, diet*max4 1 0, diet*max4 0 1 / WALD;
 RUN;
-/*Cette fois, on ne peut pas rejeter que l'effet de la diète ne change pas dans le temps
-(Interaction week*diet 4 4.41 0.3538 Wald). Toutefois, les résultats confirment qu'il y
-a un changement de pente à la semaine 4 (Changement de pente 3 127.89 <.0001 Wald).
-Puisque l'effet de la diète ne varie pas dans le temps, on pourrait simplement
+/*Cette fois, on ne peut pas rejeter que l'effet de la diÃ¨te ne change pas dans le temps
+(Interaction week*diet 4 4.41 0.3538 Wald). Toutefois, les rÃ©sultats confirment qu'il y
+a un changement de pente Ã  la semaine 4 (Changement de pente 3 127.89 <.0001 Wald).
+Puisque l'effet de la diÃ¨te ne varie pas dans le temps, on pourrait simplement
 comparer les moyennes sur toutes les semaines entre elles. Malheureusement,
 on ne peut pas utiliser LSMEANS avec PARAM = REF...*/
 
@@ -198,29 +198,29 @@ PROC SORT DATA = milk2; BY cow week; RUN;
 PROC GENMOD DATA = milk2;
 	CLASS cow diet / PARAM = GLM; 
 	MODEL protein = diet week diet*week max4 diet*max4 / LINK = ID DIST = normal TYPE3 WALD;
-	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble approprié dans ce cas;
+	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble appropriÃ© dans ce cas;
 	LSMEANS diet / DIFF CL; 
 	OUTPUT OUT = resid DFBETA = _all_  resraw = resid COOKSD = cook P = predit;
-	/*Plus difficile de construire le test d'hypothèse simultané avec PARAM = GLM...
-	pour obtenir les mêmes résultats!
-	Une stratégie serait de de calculer les tests avec PARAM = REF
+	/*Plus difficile de construire le test d'hypothÃ¨se simultanÃ© avec PARAM = GLM...
+	pour obtenir les mÃªmes rÃ©sultats!
+	Une stratÃ©gie serait de de calculer les tests avec PARAM = REF
 	et obtenir les LSMEANS avec PARAM = GLM!*/
 
-	/*Est-ce que l'effet de la diète varie dans le temps ?*/
+	/*Est-ce que l'effet de la diÃ¨te varie dans le temps ?*/
 	CONTRAST "Int. diet*week" diet*week 1 -1  0, diet*week 1  0 -1,
 							  diet*week 1 -1  0  diet*max4 1 -1  0,
 							  diet*week 1  0 -1  diet*max4 1  0 -1 / WALD;
-	/*La pente change-t-elle après la semaine 4?*/
+	/*La pente change-t-elle aprÃ¨s la semaine 4?*/
 	CONTRAST "diet*week" max4 1 diet*max4 1 0 0, max4 1 diet*max4 0 1 0, max4 1 diet*max4 0 0 1 / WALD;
-	/*Remarquez que j'obtiens exactement les mêmes résultats dans mes énoncés CONTRAST avec PARAM = GLM
+	/*Remarquez que j'obtiens exactement les mÃªmes rÃ©sultats dans mes Ã©noncÃ©s CONTRAST avec PARAM = GLM
 	qu'avec PARAM = REF*/
 RUN;
 
 /*
-En moyenne, la diète à l'orge a un contenu en protéine plus élevé que la diète mélangée
-(différence de moyenne = 0.10, IC à 95%: 0.01 à 0.19) et que la diète au lupin
-(différence de moyenne = 0.21, IC à 95%: 0.11 à 0.32). La diète mélangé est par ailleurs
-supérieure à la diète au lupin (différence de moyenne = 0.11, IC à 95%: 0.02 à 0.20).*/
+En moyenne, la diÃ¨te Ã  l'orge a un contenu en protÃ©ine plus Ã©levÃ© que la diÃ¨te mÃ©langÃ©e
+(diffÃ©rence de moyenne = 0.10, IC Ã  95%: 0.01 Ã  0.19) et que la diÃ¨te au lupin
+(diffÃ©rence de moyenne = 0.21, IC Ã  95%: 0.11 Ã  0.32). La diÃ¨te mÃ©langÃ© est par ailleurs
+supÃ©rieure Ã  la diÃ¨te au lupin (diffÃ©rence de moyenne = 0.11, IC Ã  95%: 0.02 Ã  0.20).*/
 
 
 PROC SORT DATA = resid; BY diet week; RUN;
@@ -230,36 +230,36 @@ PROC MEANS DATA = resid NOPRINT;
 	OUTPUT OUT = moyennes MEAN = ;
 RUN;
 
-/*Graphique des valeurs prédites*/
+/*Graphique des valeurs prÃ©dites*/
 PROC SGPLOT DATA = moyennes;
 	SERIES Y = predit X = week / GROUP = diet;
 RUN;
 
-/*Tendance observées (pointillé) et prédite (ligne pleine) superposées*/
+/*Tendance observÃ©es (pointillÃ©) et prÃ©dite (ligne pleine) superposÃ©es*/
 PROC SGPLOT DATA = resid;
 	SERIES Y = predit X = week / GROUP = diet;
 	LOESS Y = protein X = week / GROUP = diet NOMARKERS LINEATTRS = (PATTERN = 2);
 RUN;
-/*Ce n'est pas un modèle parfait, mais il semble faire une bonne approximation sans nécessiter
-trop de paramètres*/
+/*Ce n'est pas un modÃ¨le parfait, mais il semble faire une bonne approximation sans nÃ©cessiter
+trop de paramÃ¨tres*/
 
 
-**********************************Défi :
+**********************************DÃ©fi :
 
-*Le défi est très difficile à relever avec
-les procédures que nous avons vues jusqu'à m'aintenant...
+*Le dÃ©fi est trÃ¨s difficile Ã  relever avec
+les procÃ©dures que nous avons vues jusqu'Ã  m'aintenant...
 
-- Je vais utiliser une stratégie par imputation multiple
-- On va d'abord devoir créer des nouvelles lignes;
+- Je vais utiliser une stratÃ©gie par imputation multiple
+- On va d'abord devoir crÃ©er des nouvelles lignes;
 
 
-*Je veux savoir quels sont les numéros de vache par diète.;
+*Je veux savoir quels sont les numÃ©ros de vache par diÃ¨te.;
 PROC FREQ DATA = milk;
 	TABLE cow*diet;
 RUN;
 
-*création d'un jeu de données en format large pour l'imputation;
-*d'abord création d'un jeu par semaine;
+*crÃ©ation d'un jeu de donnÃ©es en format large pour l'imputation;
+*d'abord crÃ©ation d'un jeu par semaine;
 DATA week1 week2 week3 week4 week5 week6
 	 week7 week8 week9 week10 week11 week12
 	 week13 week14 week15 week16 week17 week18 week19;
@@ -349,17 +349,17 @@ DATA large;
 	BY cow;
 RUN;
 
-/*Vérifier le format du fichier*/
+/*VÃ©rifier le format du fichier*/
 PROC PRINT DATA = large (obs = 5); RUN;
 
 
 PROC MI DATA = large NIMPUTE = 0;
 	VAR diet1 diet2 protein1-protein19;
 RUN;
-/*Environ 47% des lignes sont complètes et 53% sont incomplètes*/
+/*Environ 47% des lignes sont complÃ¨tes et 53% sont incomplÃ¨tes*/
 
-/*Note : l'approche bayésienne basée sur l'hypothèse de normalité
-multivariée se prête bien dans ce cas, puisque toutes les variables sont
+/*Note : l'approche bayÃ©sienne basÃ©e sur l'hypothÃ¨se de normalitÃ©
+multivariÃ©e se prÃªte bien dans ce cas, puisque toutes les variables sont
 contiues.*/
 PROC MI DATA = large NIMPUTE = 53 OUT = large_imp SEED = 4791847;
 	VAR diet1 diet2 protein1-protein19;
@@ -368,8 +368,8 @@ PROC MI DATA = large NIMPUTE = 53 OUT = large_imp SEED = 4791847;
 	     PLOTS = (ALL ACF(NLAG = 1000));
 	EM MAXITER = 500;
 RUN;
-/*Il est très difficile d'obtenir de bons graphiques d'auto-corrélation
-pour les variables protéines 18-19, car il y a beaucoup de données manquantes...*/
+/*Il est trÃ¨s difficile d'obtenir de bons graphiques d'auto-corrÃ©lation
+pour les variables protÃ©ines 18-19, car il y a beaucoup de donnÃ©es manquantes...*/
 
 DATA long;
 	SET large_imp;
@@ -400,19 +400,19 @@ RUN;
 PROC SORT DATA = long; BY _imputation_ cow week; RUN;
 
 
-/*Il est difficile d'utiliser l'approche séquentielle 
+/*Il est difficile d'utiliser l'approche sÃ©quentielle 
 avec l'imputation multiple... Supposons qu'on veut simplement
-comparer les moyennes globales entre les diètes pour simplifier*/
+comparer les moyennes globales entre les diÃ¨tes pour simplifier*/
 
-/*Je vais d'abord rouler une fois la procédure pour la première imputation
-en utilisant ODS TRACE ON; et ODS TRACE OFF; pour connaître le nom
+/*Je vais d'abord rouler une fois la procÃ©dure pour la premiÃ¨re imputation
+en utilisant ODS TRACE ON; et ODS TRACE OFF; pour connaÃ®tre le nom
 que SAS donne au tableau des LSMEANS (se trouve dans le log)*/
 ODS TRACE ON;
 PROC GENMOD DATA = long;
 	WHERE _imputation_ = 1;
 	CLASS cow diet week;
 	MODEL protein = diet|week / LINK = ID DIST = normal TYPE3 WALD;
-	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble approprié dans ce cas;
+	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble appropriÃ© dans ce cas;
 	LSMEANS diet / DIFF;
 RUN;
 ODS TRACE OFF;
@@ -436,19 +436,19 @@ PROC GENMOD DATA = long;
 	BY _imputation_;
 	CLASS cow diet week;
 	MODEL protein = diet|week / LINK = ID DIST = normal TYPE3 WALD;
-	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble approprié dans ce cas;
+	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble appropriÃ© dans ce cas;
 	LSMEANS diet / DIFF;
 	ODS OUTPUT Diffs = Diffs;
 	ODS SELECT Diffs;
 RUN;
 
 /*Il est un peu difficile de combiner les
-résultats de LSMEANS avec PROC MIANALYZE.
-Je m'en suis sorti en créant une nouvelle variable
-qui indiquera quelle différence de moyenne est considérée
-(1 vs 2, 1 vs 3 ou 2 vs 3) et j'exécute séparément
-MIANALYZE pour chaque différence. Je vais simplement
-donner à MIANALYZE les différences de moyennes à combiner
+rÃ©sultats de LSMEANS avec PROC MIANALYZE.
+Je m'en suis sorti en crÃ©ant une nouvelle variable
+qui indiquera quelle diffÃ©rence de moyenne est considÃ©rÃ©e
+(1 vs 2, 1 vs 3 ou 2 vs 3) et j'exÃ©cute sÃ©parÃ©ment
+MIANALYZE pour chaque diffÃ©rence. Je vais simplement
+donner Ã  MIANALYZE les diffÃ©rences de moyennes Ã  combiner
 avec leur erreur type.*/
 DATA diffs2;
 	SET diffs;
@@ -466,7 +466,7 @@ RUN;
 PROC GENMOD DATA = milk;
 	CLASS cow diet week;
 	MODEL protein = diet|week / LINK = ID DIST = normal TYPE3 WALD;
-	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble approprié dans ce cas;
+	REPEATED SUBJECT = cow / TYPE = AR(1); *Le type AR(1) semble appropriÃ© dans ce cas;
 	LSMEANS diet / DIFF;
 RUN;
 
@@ -483,7 +483,7 @@ estimate 0.112086 0.046032 0.021860 0.202312 22436 0.088659 0.132189 0 2.43 0.01
 estimate 0.221313 0.053716 0.116026 0.326601 24824 0.192615 0.248007 0 4.12 <.0001 
 estimate 0.109227 0.044465 0.022073 0.196381 22599 0.089237 0.129828 0 2.46 0.0140 
 
-Les résultats sont donc similaires!
+Les rÃ©sultats sont donc similaires!
 */
 
 
@@ -493,14 +493,14 @@ Les résultats sont donc similaires!
 * 7.2 EXEMPLE DE SOLUTION PROC MIXED *
 *************************************/
 
-*Importation des données;
+*Importation des donnÃ©es;
 DATA milk;
-	INFILE "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2014\Données\milk.data";
+	INFILE "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2014\DonnÃ©es\milk.data";
 	INPUT diet cow week protein;
 RUN;
 
 
-*Vérifier que l'importation s'est bien déroulée;
+*VÃ©rifier que l'importation s'est bien dÃ©roulÃ©e;
 PROC CONTENTS DATA = milk VARNUM; RUN;
 
 PROC PRINT DATA = milk (OBS = 20); RUN;
@@ -508,13 +508,13 @@ PROC PRINT DATA = milk (OBS = 20); RUN;
 
 *Statistiques descriptives;
 
-*Je trace les courbes pour quelques vaches choisies "aléatoirement";
+*Je trace les courbes pour quelques vaches choisies "alÃ©atoirement";
 PROC SGPLOT DATA = milk;
 	WHERE cow in(1, 10, 20, 30, 40, 50, 60, 70);
 	SERIES X = week Y = protein / GROUP = cow;
 RUN;
 
-*Je trace les courbes lissées pour chaque diète;
+*Je trace les courbes lissÃ©es pour chaque diÃ¨te;
 PROC SGPANEL DATA = milk;
 	PANELBY diet;
 	SERIES X = week Y = protein / GROUP = COW;
@@ -525,20 +525,20 @@ PROC SGPANEL DATA = milk;
 	PANELBY diet;
 	LOESS X = week Y = protein;
 RUN; 
-*Dans tous les cas, la quantité de protéine chute rapidement au début, puis
-reste relativement stable ou augmente selon la diète.
-On devrait exclure l'idée de modéliser une tendance linéaire.
-On pourrait utiliser du linéaire par morceau ou autre;
+*Dans tous les cas, la quantitÃ© de protÃ©ine chute rapidement au dÃ©but, puis
+reste relativement stable ou augmente selon la diÃ¨te.
+On devrait exclure l'idÃ©e de modÃ©liser une tendance linÃ©aire.
+On pourrait utiliser du linÃ©aire par morceau ou autre;
 
 
-*Moyennes et médianne par semaine par diète.;
+*Moyennes et mÃ©dianne par semaine par diÃ¨te.;
 PROC TABULATE DATA = milk;
 	CLASS diet week;
 	VAR protein;
 	TABLE diet, week*protein = ""*(MEAN = "Moy" MEDIAN = "Med");
 RUN;
 
-*Juste moyennes, car moyennes et médianes similaires.;
+*Juste moyennes, car moyennes et mÃ©dianes similaires.;
 PROC TABULATE DATA = milk;
 	CLASS diet week;
 	VAR protein;
@@ -556,39 +556,39 @@ RUN;
 PROC SGPLOT DATA = moy;
 	SERIES X = week Y = m_protein / GROUP = diet;
 RUN;
-*Le pic le plus bas est obtenu à la 4e semaine;
+*Le pic le plus bas est obtenu Ã  la 4e semaine;
 
-/*Étant donné les graphiques observés, ce n'est pas très sensé
-de supposé une relation linéaire entre le temps et la quantité de
-protéines. Catégoriser les semaines est donc une approche simple,
-bien qu'elle exige beaucoup de paramètres.
-Étant donné que j'ai des mesures longitudinales également espacées,
-une approche très intuitive pour modéliser la corrélation entre
-les mesures répétées est d'utiliser une forme AR(1) pour les erreurs
-résiduelles associées à une vache donnée.
-Je vais tout de même essayer plusieurs modélisation, les comparer par
-rapport au BIC et interpréter l'analyse avec le meilleur ajustement
+/*Ã‰tant donnÃ© les graphiques observÃ©s, ce n'est pas trÃ¨s sensÃ©
+de supposÃ© une relation linÃ©aire entre le temps et la quantitÃ© de
+protÃ©ines. CatÃ©goriser les semaines est donc une approche simple,
+bien qu'elle exige beaucoup de paramÃ¨tres.
+Ã‰tant donnÃ© que j'ai des mesures longitudinales Ã©galement espacÃ©es,
+une approche trÃ¨s intuitive pour modÃ©liser la corrÃ©lation entre
+les mesures rÃ©pÃ©tÃ©es est d'utiliser une forme AR(1) pour les erreurs
+rÃ©siduelles associÃ©es Ã  une vache donnÃ©e.
+Je vais tout de mÃªme essayer plusieurs modÃ©lisation, les comparer par
+rapport au BIC et interprÃ©ter l'analyse avec le meilleur ajustement
 selon le BIC.
  - AR
- - ARH(1) (même chose que AR(1), mais avec des variances pouvant varier selon la semaine)
- - CS <=> ordonnée à l'origine aléatoire
- - CSH (même chose que CS, mais avec des variances pouvant varier selon la semaine)
+ - ARH(1) (mÃªme chose que AR(1), mais avec des variances pouvant varier selon la semaine)
+ - CS <=> ordonnÃ©e Ã  l'origine alÃ©atoire
+ - CSH (mÃªme chose que CS, mais avec des variances pouvant varier selon la semaine)
 Et comparer l'ajustement en fonction du BIC.
-Je ne testerai pas UN, parce que ce serait trop lourd (19*20/2 = 190 paramètres à estimer!)
+Je ne testerai pas UN, parce que ce serait trop lourd (19*20/2 = 190 paramÃ¨tres Ã  estimer!)
 
-Ici, supposer une pente linéaire aléatoire selon la vache n'aurait pas beaucoup de sens 
-puisque la relation entre les protéines et les semaines ne semble pas du tout linéaire.
-Ce ne serait techniquement pas possible de supposer une ordonnée à l'origine aléatoire
-pour la vache et une effet aléatoire de la semaine catégorique
-pour la vache, car on aurait alors autant de paramètres aléatoires qu'il y a d'observation
+Ici, supposer une pente linÃ©aire alÃ©atoire selon la vache n'aurait pas beaucoup de sens 
+puisque la relation entre les protÃ©ines et les semaines ne semble pas du tout linÃ©aire.
+Ce ne serait techniquement pas possible de supposer une ordonnÃ©e Ã  l'origine alÃ©atoire
+pour la vache et une effet alÃ©atoire de la semaine catÃ©gorique
+pour la vache, car on aurait alors autant de paramÃ¨tres alÃ©atoires qu'il y a d'observation
 par vache. 
 
-On pourrait cependant utiliser une ordonnée à l'origine aléatoire, une
-pente aléatoire et un terme quadratique aléatoire. Il faudrait alors créer une variable
-week_continue qu'on ne mettrait pas dans l'énoncé CLASS, voir ci-dessous.*/
+On pourrait cependant utiliser une ordonnÃ©e Ã  l'origine alÃ©atoire, une
+pente alÃ©atoire et un terme quadratique alÃ©atoire. Il faudrait alors crÃ©er une variable
+week_continue qu'on ne mettrait pas dans l'Ã©noncÃ© CLASS, voir ci-dessous.*/
 
  
-/*Comparaison de différents modèles*/
+/*Comparaison de diffÃ©rents modÃ¨les*/
 /*AR(1)*/
 PROC SORT DATA = milk; BY cow week; RUN;
 PROC MIXED DATA = milk;
@@ -619,7 +619,7 @@ PROC MIXED DATA = milk;
 	REPEATED / SUBJECT = cow TYPE = CSH; 
 RUN; /*BIC = 457.4 */
 
-/*Ordonnée, week et week^2 aléatoires*/
+/*OrdonnÃ©e, week et week^2 alÃ©atoires*/
 DATA milk_cont;
 	SET milk;
 	week_continue = week;
@@ -633,7 +633,7 @@ PROC MIXED DATA = milk_cont;
 RUN; /*BIC = 143.2 */
 
 
-/*Conclusion: ordonnée, week et week2 aléatoire est la structure fonctionnant le mieux!*/
+/*Conclusion: ordonnÃ©e, week et week2 alÃ©atoire est la structure fonctionnant le mieux!*/
 
 PROC SORT DATA = milk_cont; BY cow week; RUN;
 PROC MIXED DATA = milk_cont;
@@ -644,16 +644,16 @@ PROC MIXED DATA = milk_cont;
 	SLICE diet*week / DIFF SLICEBY = week;
 	ODS OUTPUT Influence = INFLUENCE;*Pour sortir les distances de Cook dans un fichier;
 RUN; 
-/*Un peu long à rouler en raison des diagnostiques d'influence*/
+/*Un peu long Ã  rouler en raison des diagnostiques d'influence*/
 DATA sortie2;
 	MERGE sortie influence;
-	id + 1; *Je crée un identifiant unique pour mes diagnostiques d'influence.;
+	id + 1; *Je crÃ©e un identifiant unique pour mes diagnostiques d'influence.;
 RUN;
 
-*Les tests de types 3 nous indiquent qu'on ne peut pas rejeter l'hypothèse
-que l'effet de la diète ne varie pas selon les semaines. De façon globale,
-la diète 1 est supérieure aux 2 autres et la 2 supérieure à la diète 3.;
-/*Remarquez les DLs au dénominateur :
+*Les tests de types 3 nous indiquent qu'on ne peut pas rejeter l'hypothÃ¨se
+que l'effet de la diÃ¨te ne varie pas selon les semaines. De faÃ§on globale,
+la diÃ¨te 1 est supÃ©rieure aux 2 autres et la 2 supÃ©rieure Ã  la diÃ¨te 3.;
+/*Remarquez les DLs au dÃ©nominateur :
 
 Type 3 Tests of Fixed Effects 
 Effect   Num DF Den DF   F Value Pr > F 
@@ -673,11 +673,11 @@ Erreur 2 = 1337 obs - 36 (dl de diet*week) - 18 (dl de week) - 76 (dl de l'erreu
 La somme des dls = 2 + 76 + 18 + 36 + 1204 = 1336, soit n - 1*/
 
 
-/*Vérification des hypothèses*/
-/*Les graphiques de la sortie de PROC MIXED suggéraient qu'on a la normalité
-et l'homoscédasticité. Il y aurait peut-être une observation un peu influente.
-Je vais tout de même tracer quelques graphiques
-des résidus selon la semaine et selon la diète pour explorer davantage et 
+/*VÃ©rification des hypothÃ¨ses*/
+/*Les graphiques de la sortie de PROC MIXED suggÃ©raient qu'on a la normalitÃ©
+et l'homoscÃ©dasticitÃ©. Il y aurait peut-Ãªtre une observation un peu influente.
+Je vais tout de mÃªme tracer quelques graphiques
+des rÃ©sidus selon la semaine et selon la diÃ¨te pour explorer davantage et 
 pour illustrer comment faire.*/ 
 PROC BOXPLOT DATA = Sortie;
 	PLOT scaledresid*diet / BOXSTYLE = SCHEMATIC;
@@ -687,7 +687,7 @@ PROC SORT DATA = Sortie; BY week; RUN;
 PROC BOXPLOT DATA = Sortie;
 	PLOT scaledresid*week / BOXSTYLE = SCHEMATIC;
 RUN; QUIT;
-*Les résidus semblent corrects;
+*Les rÃ©sidus semblent corrects;
 
 
 PROC SORT DATA = sortie2; BY DESCENDING CookD; RUN;
@@ -695,31 +695,31 @@ PROC PRINT DATA = sortie2 (OBS = 20); RUN;
 PROC SGPLOT DATA = sortie2;
 	NEEDLE X = id Y = CookD;
 RUN;
-/*Il y a peut-être une observation influente. On pourrait essayer de la retirer en
-guise d'analyse de sensibilité*/
+/*Il y a peut-Ãªtre une observation influente. On pourrait essayer de la retirer en
+guise d'analyse de sensibilitÃ©*/
 
 
-/*Interprétation: 
-Nos analyses indiquent que le contenu en protéines du lait de vache varie en fonction de la diète et du temps
-écoulé depuis le vêlage. Cependant, les analyses effectuées ne permettent pas d'identifier une variation dans
-l'effet de la diète sur le contenu en protéines en fonction du temps écoulé depuis le vêlage. 
-En moyenne, le contenu en protéine du lait des vaches nourries à l'orge est supérieur à celui des vaches nourries 
-au lupin (0.22 IC à 95%: 0.11 à 0.34) ou avec un mélange d'orge et de lupin (0.11, IC à 95%: 0.00, 0.23). 
-Les vaches nourries selon le mélange donnent également un lait plus riche en protéine
-que les vaches nourries au lupin (0.11, IC à 95%: -0.00, 0.22).
+/*InterprÃ©tation: 
+Nos analyses indiquent que le contenu en protÃ©ines du lait de vache varie en fonction de la diÃ¨te et du temps
+Ã©coulÃ© depuis le vÃªlage. Cependant, les analyses effectuÃ©es ne permettent pas d'identifier une variation dans
+l'effet de la diÃ¨te sur le contenu en protÃ©ines en fonction du temps Ã©coulÃ© depuis le vÃªlage. 
+En moyenne, le contenu en protÃ©ine du lait des vaches nourries Ã  l'orge est supÃ©rieur Ã  celui des vaches nourries 
+au lupin (0.22 IC Ã  95%: 0.11 Ã  0.34) ou avec un mÃ©lange d'orge et de lupin (0.11, IC Ã  95%: 0.00, 0.23). 
+Les vaches nourries selon le mÃ©lange donnent Ã©galement un lait plus riche en protÃ©ine
+que les vaches nourries au lupin (0.11, IC Ã  95%: -0.00, 0.22).
 
-Le contenu en protéines du lait a également été comparé à chaque semaine. Les résultats obtenus pour ces analyses confirment
-la supériorité de la diète à l'orge par rapport à la diète au lupin. En effet, le contenu en protéine du lait des vaches nourries à l'orge
-est supérieur à celui des vaches nourries au lupin pour les semaines 2, 5 ainsi que 7 à 17. Les comparaisons par
-semaine de la diète à l'orge vs la diète mélangée ou de la diète mélangée vs la diète au lupin sont cependant plus nuancés
+Le contenu en protÃ©ines du lait a Ã©galement Ã©tÃ© comparÃ© Ã  chaque semaine. Les rÃ©sultats obtenus pour ces analyses confirment
+la supÃ©rioritÃ© de la diÃ¨te Ã  l'orge par rapport Ã  la diÃ¨te au lupin. En effet, le contenu en protÃ©ine du lait des vaches nourries Ã  l'orge
+est supÃ©rieur Ã  celui des vaches nourries au lupin pour les semaines 2, 5 ainsi que 7 Ã  17. Les comparaisons par
+semaine de la diÃ¨te Ã  l'orge vs la diÃ¨te mÃ©langÃ©e ou de la diÃ¨te mÃ©langÃ©e vs la diÃ¨te au lupin sont cependant plus nuancÃ©s
 en raison d'un manque de puissance statistique.*/
 
-/*Remarquons en conclusion que les résultats avec GENMOD avec ou sans imputation ainsi que ceux avec PROC MIXED 
-sont très similaires.*/
+/*Remarquons en conclusion que les rÃ©sultats avec GENMOD avec ou sans imputation ainsi que ceux avec PROC MIXED 
+sont trÃ¨s similaires.*/
 
-**********************************Défi :
+**********************************DÃ©fi :
 
-*Étant donné que les modèles mixtes sont robustes aux données MAR, il n'y
-a rien de plus à faire!;
+*Ã‰tant donnÃ© que les modÃ¨les mixtes sont robustes aux donnÃ©es MAR, il n'y
+a rien de plus Ã  faire!;
 
 
