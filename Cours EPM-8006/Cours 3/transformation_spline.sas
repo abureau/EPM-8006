@@ -1,14 +1,14 @@
 /* Illustration de transformation spline */
-libname modeli " C:\Users\etudiant\Documents\EPM-8006\donnees";
+libname modeli "/workspaces/workspace/DonnÃ©es EPM-8006";
 
 DATA POL; SET modeli.CHP05;
 
-/* Définition de la variable réponse de faible poids de naissance (< 2500g) */
+/* DÃ©finition de la variable rÃ©ponse de faible poids de naissance (< 2500g) */
 IF PDS<=2500      THEN Y=1;     ELSE Y=2;
 
-/* recodage de la variable de prématurité en 2 catégories oui/non */
+/* recodage de la variable de prÃ©maturitÃ© en 2 catÃ©gories oui/non */
 IF PREM IN(1,2,3) THEN PREM=1;  ELSE PREM=0;
-/* recodage du poids de la mère en une variable codant des intervalles de 10 kg de 1 à 5 */
+/* recodage du poids de la mÃ¨re en une variable codant des intervalles de 10 kg de 1 Ã  5 */
 if      pdsm<45 then pdm=1;
 if  45<=pdsm<55 then pdm=2;
 if  55<=pdsm<65 then pdm=3;
@@ -16,8 +16,8 @@ if  65<=pdsm<75 then pdm=4;
 if     pdsm>=75 then pdm=5;
 run;
 
-/* Modèle du faible poids de naissance en fonction du poids de la mère, de l'antécédant
-   de prématurité aux grossesses antérieures et de l'hypertension chez la mère pendant la grossesse. */
+/* ModÃ¨le du faible poids de naissance en fonction du poids de la mÃ¨re, de l'antÃ©cÃ©dant
+   de prÃ©maturitÃ© aux grossesses antÃ©rieures et de l'hypertension chez la mÃ¨re pendant la grossesse. */
 
 PROC TRANSREG DATA = pol DESIGN;
     MODEL BSPLINE(age);
