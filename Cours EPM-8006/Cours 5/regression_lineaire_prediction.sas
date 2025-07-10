@@ -1,13 +1,13 @@
 ODS GRAPHICS OFF; /*Je ferme les graphiques pour sauver du temps de roulement de programmes*/
 
-/*Importation des données*/
-PROC IMPORT DATAFILE = "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2014\Données\fram12.csv"
+/*Importation des donnÃ©es*/
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/fram12.csv"
 	OUT = fram12
 	REPLACE
 	DBMS = CSV;
 RUN;
 
-/*Vérifier que l'importation s'est bien déroulée*/
+/*VÃ©rifier que l'importation s'est bien dÃ©roulÃ©e*/
 PROC CONTENTS DATA = fram12 VARNUM; RUN;
 
 PROC PRINT DATA = fram12 (OBS = 10); RUN;
@@ -17,34 +17,34 @@ PROC MEANS DATA = fram12 MIN Q1 MEAN MEDIAN Q3 MAX STD;
 	VAR totchol1 age1 sysbp1 diabp1 cursmoke1 cigpday1 bmi1 
 		heartrte1 glucose1 sysbp2;
 RUN;
-/*On remarque des valeurs extrêmes*/
+/*On remarque des valeurs extrÃªmes*/
 
 PROC FREQ DATA = fram12;
 	TABLE sex diabetes1 bpmeds1 educ1 prevchd1 prevap1 prevmi1 prevstrk1 prevhyp1;
 RUN;
-/*Il y a de très petites fréquences pour certaines variables. Je ne considèrerai
+/*Il y a de trÃ¨s petites frÃ©quences pour certaines variables. Je ne considÃ¨rerai
 pas individuellement AP, MI et STRK.*/
 
-/*********************EXEMPLE CONTEXTE PRÉDICTION*********************/
+/*********************EXEMPLE CONTEXTE PRÃ‰DICTION*********************/
 
-/*On veut construire un modèle permettant de prédire la SBP à la deuxième
-période en fonction de variables mesurées à la première période. L'approche
-idéale consiste à guider le choix des variables par nos connaissances de la 
-littérature scientifique.
+/*On veut construire un modÃ¨le permettant de prÃ©dire la SBP Ã  la deuxiÃ¨me
+pÃ©riode en fonction de variables mesurÃ©es Ã  la premiÃ¨re pÃ©riode. L'approche
+idÃ©ale consiste Ã  guider le choix des variables par nos connaissances de la 
+littÃ©rature scientifique.
 
-Dans cet exemple, je suppose que les connaissances à ce sujet sont peu avancées. 
-Je choisis donc une approche exploratoire où les données guideront le choix des
-variables (procédure de sélection automatique).
+Dans cet exemple, je suppose que les connaissances Ã  ce sujet sont peu avancÃ©es. 
+Je choisis donc une approche exploratoire oÃ¹ les donnÃ©es guideront le choix des
+variables (procÃ©dure de sÃ©lection automatique).
 
-Pour tout de même bien déterminer le pouvoir prédictif du modèle construit, je
-diviserai le jeu de données en deux parties. Un partie d'entraînement (2/3) et une
+Pour tout de mÃªme bien dÃ©terminer le pouvoir prÃ©dictif du modÃ¨le construit, je
+diviserai le jeu de donnÃ©es en deux parties. Un partie d'entraÃ®nement (2/3) et une
 partie de validation (1/3). La partie de validation ne doit aucunement servir dans
-le choix des variables, pas même avec des statistiques descriptives*/
+le choix des variables, pas mÃªme avec des statistiques descriptives*/
 
 DATA entrainement validation;
 	SET fram12;
-	entrainement = ranbin(4317981, 1, 2/3); /*Je crée une variable entrainement
-		qui a une probabilité 2/3 de valoir 1.*/
+	entrainement = ranbin(4317981, 1, 2/3); /*Je crÃ©e une variable entrainement
+		qui a une probabilitÃ© 2/3 de valoir 1.*/
 	IF entrainement = 1 THEN OUTPUT entrainement;
 	ELSE OUTPUT validation;
 	KEEP randid totchol1 age1 sysbp1 diabp1 cursmoke1 cigpday1 bmi1 
@@ -53,24 +53,24 @@ DATA entrainement validation;
 RUN;
 
 /*Je pourrais commencer par effectuer quelques statistiques descriptives
-pour déterminer s'il y a une association entre les variables sélectionnées
-et l'issue que je cherche à prédire*/
+pour dÃ©terminer s'il y a une association entre les variables sÃ©lectionnÃ©es
+et l'issue que je cherche Ã  prÃ©dire*/
 
 PROC CORR DATA = entrainement PEARSON SPEARMAN;
 	VAR sysbp2;
 	WITH totchol1 age1 sysbp1 diabp1 cigpday1 bmi1
 		 heartrte1 glucose1;
-RUN; /*Toutes les corrélations sont statistiquement significatives.
-Celles pour SBP et DBP se démarquent particulièrement. 
-Il n'y a généralement pas trop de différence entre la corrélation
-linéaire de Pearson et la corrélation monotone de Spearman, ce qui
-peut suggérer que l'hypothèse de linéarité semble raisonable a priori
-et qu'il n'y a pas trop d'observations très influentes.
-En effet, la corrélation de Spearman est non-paramétrique et est
-robuste aux valeurs extrêmes.
+RUN; /*Toutes les corrÃ©lations sont statistiquement significatives.
+Celles pour SBP et DBP se dÃ©marquent particuliÃ¨rement. 
+Il n'y a gÃ©nÃ©ralement pas trop de diffÃ©rence entre la corrÃ©lation
+linÃ©aire de Pearson et la corrÃ©lation monotone de Spearman, ce qui
+peut suggÃ©rer que l'hypothÃ¨se de linÃ©aritÃ© semble raisonable a priori
+et qu'il n'y a pas trop d'observations trÃ¨s influentes.
+En effet, la corrÃ©lation de Spearman est non-paramÃ©trique et est
+robuste aux valeurs extrÃªmes.
 
 On pourrait aussi tracer avec SGPLOT des graphiques de la variable
-à prédire en fonction de chacune des variables prédictrices en ajoutant
+Ã  prÃ©dire en fonction de chacune des variables prÃ©dictrices en ajoutant
 une courbe de tendance.*/
 
 PROC SGPLOT DATA = entrainement;
@@ -113,19 +113,19 @@ PROC SGPLOT DATA = entrainement;
 	LOESS X = glucose1 Y = sysbp2;
 RUN;
 
-/*Les relations semblent effectivement assez linéaires,
-mais certaines valeurs extrêmes d'IMC et de glucose pourraient être
-influentes sur les résultats... Pour l'instant, je décide
-de ne rien faire, mais je garde ces informations en tête.*/
+/*Les relations semblent effectivement assez linÃ©aires,
+mais certaines valeurs extrÃªmes d'IMC et de glucose pourraient Ãªtre
+influentes sur les rÃ©sultats... Pour l'instant, je dÃ©cide
+de ne rien faire, mais je garde ces informations en tÃªte.*/
 
 PROC TABULATE DATA = entrainement;
 	VAR sysbp2;
 	CLASS sex diabetes1 bpmeds1 educ1 prevchd1 prevhyp1;
 	TABLE sex diabetes1 bpmeds1 educ1 prevchd1 prevhyp1, sysbp2*(mean std);
-RUN; /*Le sexe et l'éducation semblent assez peu associés avec la pression systolique*/
+RUN; /*Le sexe et l'Ã©ducation semblent assez peu associÃ©s avec la pression systolique*/
 
-/*J'effectue la sélection automatique de variable sur toutes
-les variables avec une approche pas-à-pas selon le BIC.*/
+/*J'effectue la sÃ©lection automatique de variable sur toutes
+les variables avec une approche pas-Ã -pas selon le BIC.*/
 
 PROC GLMSELECT DATA = entrainement;
 	CLASS sex diabetes1 bpmeds1 educ1 prevchd1 prevhyp1 /DESCENDING;
@@ -134,11 +134,11 @@ PROC GLMSELECT DATA = entrainement;
 		prevhyp1 / SELECTION = STEPWISE(CHOOSE = BIC SELECT = BIC) SHOWPVALUES;
 RUN; QUIT;
 
-/*Je vérifie les hypothèses sur le modèle sélectionné.
-Note: Probablement que la stratégie idéale à ce sujet serait de vérifier
-les hypothèses à la fois sur le modèle complet, avant sélection, et sur
-le modèle choisit. En effet, le respect des hypothèses peut dépendre du
-modèle exact considéré et peut affecter le choix des variables.*/
+/*Je vÃ©rifie les hypothÃ¨ses sur le modÃ¨le sÃ©lectionnÃ©.
+Note: Probablement que la stratÃ©gie idÃ©ale Ã  ce sujet serait de vÃ©rifier
+les hypothÃ¨ses Ã  la fois sur le modÃ¨le complet, avant sÃ©lection, et sur
+le modÃ¨le choisit. En effet, le respect des hypothÃ¨ses peut dÃ©pendre du
+modÃ¨le exact considÃ©rÃ© et peut affecter le choix des variables.*/
 
 PROC REG DATA = entrainement;
 	MODEL SYSBP2 = age1 SYSBP1 BMI1 diabetes1 prevhyp1 / VIF;
@@ -147,42 +147,42 @@ PROC REG DATA = entrainement;
 RUN; QUIT;
 
 
-/*1. Linéarité: à vérifier uniquement pour les variables dont on suppose
-dans le modèle que l'effet est linéaire (ici: AGE1, SYSBP1 et BMI1)*/
+/*1. LinÃ©aritÃ©: Ã  vÃ©rifier uniquement pour les variables dont on suppose
+dans le modÃ¨le que l'effet est linÃ©aire (ici: AGE1, SYSBP1 et BMI1)*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = AGE1 Y = student;
 	LOESS X = AGE1 Y = student;
 	REFLINE 0;
-RUN;  /*Aucune tendance résiduelle, hypothèse semble respectée.*/
+RUN;  /*Aucune tendance rÃ©siduelle, hypothÃ¨se semble respectÃ©e.*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = SYSBP1 Y = student;
 	LOESS X = SYSBP1 Y = student;
 	REFLINE 0;
-RUN;  /*Très légère tendance résiduelle, hypothèse semble respectée.*/
+RUN;  /*TrÃ¨s lÃ©gÃ¨re tendance rÃ©siduelle, hypothÃ¨se semble respectÃ©e.*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = BMI1 Y = student;
 	LOESS X = BMI1 Y = student;
 	REFLINE 0;
-RUN;/*Très légère tendance résiduelle, hypothèse semble respectée.*/
+RUN;/*TrÃ¨s lÃ©gÃ¨re tendance rÃ©siduelle, hypothÃ¨se semble respectÃ©e.*/
 
-/* 2. Indépendance: Selon nos connaissances du contexte de 
-l'étude, il s'agirait d'observations indépendantes.*/
+/* 2. IndÃ©pendance: Selon nos connaissances du contexte de 
+l'Ã©tude, il s'agirait d'observations indÃ©pendantes.*/
 
-/* 3. Homoscédasticité : Pas vraiment important dans un contexte
-de prédiction, à moins qu'on construise des ICs sur les valeurs prédites.*/
+/* 3. HomoscÃ©dasticitÃ© : Pas vraiment important dans un contexte
+de prÃ©diction, Ã  moins qu'on construise des ICs sur les valeurs prÃ©dites.*/
 
-/* 4. Normalité : Pas vraiment pertinent dans notre cas, car 
+/* 4. NormalitÃ© : Pas vraiment pertinent dans notre cas, car 
 1) n est assez grand, 2) on ne veut pas construire d'IC pour les valeurs 
-prédites.*/
+prÃ©dites.*/
 	 
-/* 5. Tous les VIFs sont < 10, il ne semble donc pas y avoir de problème de
-multicollinéarité. Autrement dit, pas de variables redondantes.*/
+/* 5. Tous les VIFs sont < 10, il ne semble donc pas y avoir de problÃ¨me de
+multicollinÃ©aritÃ©. Autrement dit, pas de variables redondantes.*/
 
-/* 6. Données inlfuentes ou aberrantes: dans notre contexte, on
-s'intéresse à l'influence sur les paramètres associés à l'exposition*/
+/* 6. DonnÃ©es inlfuentes ou aberrantes: dans notre contexte, on
+s'intÃ©resse Ã  l'influence sur les paramÃ¨tres associÃ©s Ã  l'exposition*/
 
 PROC SORT DATA = sortie; BY DESCENDING cookd; RUN;
 PROC PRINT DATA = sortie (OBS = 20);
@@ -193,12 +193,12 @@ PROC SGPLOT DATA = sortie;
 	NEEDLE Y = cookd X = RANDID;
 RUN;
 
-/*Il ne semble pas y avoir d'observations particulièrement influentes
-sur les prédictions.*/
+/*Il ne semble pas y avoir d'observations particuliÃ¨rement influentes
+sur les prÃ©dictions.*/
 
 
 
-/*Tester le modèle sur l'ensemble de validation*/
+/*Tester le modÃ¨le sur l'ensemble de validation*/
 
 PROC MEANS DATA = validation MEAN;
 	VAR sysbp2;
@@ -217,15 +217,15 @@ PROC MEANS DATA = validation SUM;
 RUN;
 /*R2 = 1 - (sum e2)/(sum y_ybar2)
 = 1 - 260316.96/522338.48 = 0.50,
-un peu plus petit que 0.53 obtenu sur l'ensemble d'entraînement.*/ 
+un peu plus petit que 0.53 obtenu sur l'ensemble d'entraÃ®nement.*/ 
 
-/*Si on réestimait les paramètres sur ces nouvelles données 
-(c'est seulement une expérience, ce n'est pas conseillé de le faire en pratique) */
+/*Si on rÃ©estimait les paramÃ¨tres sur ces nouvelles donnÃ©es 
+(c'est seulement une expÃ©rience, ce n'est pas conseillÃ© de le faire en pratique) */
 PROC REG DATA = validation;
 	MODEL SYSBP2 = age1 SYSBP1 BMI1 diabetes1 prevhyp1;
 RUN; QUIT;
 
-/*Entraînement:
+/*EntraÃ®nement:
 Intercept 1 40.91105 3.67833 11.12 <.0001 
 AGE1      1  0.26658 0.04400  6.06 <.0001 
 SYSBP1    1  0.58223 0.02406 24.19 <.0001 
@@ -242,10 +242,10 @@ BMI1      1  0.12967 0.13569  0.96 0.3395
 DIABETES1 1  0.18405 3.40491  0.05 0.9569 
 PREVHYP1  1  3.53525 1.58857  2.23 0.0263 
 
-On remarque que les paramètres estimés sur les données
-de validation sont généralement plus petits que ceux
-sur les données d'entraînement. En effet, la sélection de variables
-basée sur les données est connue pour introduire un biais
-de surestimation de l'effet (dans la direction opposée de 0),
-le biais est possiblement particulièrement grand pour diabete
+On remarque que les paramÃ¨tres estimÃ©s sur les donnÃ©es
+de validation sont gÃ©nÃ©ralement plus petits que ceux
+sur les donnÃ©es d'entraÃ®nement. En effet, la sÃ©lection de variables
+basÃ©e sur les donnÃ©es est connue pour introduire un biais
+de surestimation de l'effet (dans la direction opposÃ©e de 0),
+le biais est possiblement particuliÃ¨rement grand pour diabete
 et prevhyp.*/
