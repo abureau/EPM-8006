@@ -1,8 +1,8 @@
-*Je considère l'estimation de l'effet
+*Je considÃ¨re l'estimation de l'effet
 causal conditionnel avec imputation MCMC;
 
-*J'importe le fichier osteo5 nettoyé.;
-PROC IMPORT DATAFILE = "C:\Users\etudiant\Documents\EPM-8006\donnees\osteo5.csv"
+*J'importe le fichier osteo5 nettoyÃ©.;
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/osteo5.csv"
 	OUT = osteo
 	DBMS = CSV
 	REPLACE;
@@ -24,14 +24,14 @@ RUN;
 
 /*************************Approche conditionnelle**********************************/
 
-*On va considérer consommation régulière ou variée vs jamais consommation régulière
+*On va considÃ©rer consommation rÃ©guliÃ¨re ou variÃ©e vs jamais consommation rÃ©guliÃ¨re
 pour avoir une exposition binaire.;
 DATA osteo_bin;
 	SET osteo;
 	IF cons_reg = 1 OR cons_var = 1 THEN cons = 1;
 	ELSE IF cons_reg = 0 AND cons_var = 0 THEN cons = 0;
 
-	*Je crée des indicatrices pour la variable catégorique;
+	*Je crÃ©e des indicatrices pour la variable catÃ©gorique;
 	IF RIDRETH1 NE . THEN DO;
 		IF RIDRETH1 = 1 THEN mex_am = 1; ELSE mex_am = 0;
 		IF RIDRETH1 = 2 THEN aut_hisp = 1; ELSE aut_hisp = 0;
@@ -42,33 +42,33 @@ DATA osteo_bin;
 	KEEP OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
 		 BMXBMI MCQ160C MCQ160L WHD020 WHD110 ALQ101 ALQ130
 		 cons SEQN OSQ010A
-		 mex_am--noir_nh; *A--B veut dire toutes les variables dans le jeu de données entre A et B;
+		 mex_am--noir_nh; *A--B veut dire toutes les variables dans le jeu de donnÃ©es entre A et B;
 RUN;
 
-*Je fais d'abord 0 imputations, juste pour connaitre mon taux de données manquantes;
+*Je fais d'abord 0 imputations, juste pour connaitre mon taux de donnÃ©es manquantes;
 PROC MI DATA = osteo_bin NIMPUTE = 0;
-RUN; *Seulement 48.7% de mes observations sont complètes,
-taux de données manquantes d'environ 51%, donc 51 imputations.;
+RUN; *Seulement 48.7% de mes observations sont complÃ¨tes,
+taux de donnÃ©es manquantes d'environ 51%, donc 51 imputations.;
 
-*J'impute toutes les variables comme si elles étaient continues;
+*J'impute toutes les variables comme si elles Ã©taient continues;
 
-PROC MI DATA = osteo_bin NIMPUTE = 51 OUT = osteo_mi SEED = 1479471; /*SEED ou germe pour assurer d'avoir toujours le même hasard*/
+PROC MI DATA = osteo_bin NIMPUTE = 51 OUT = osteo_mi SEED = 1479471; /*SEED ou germe pour assurer d'avoir toujours le mÃªme hasard*/
 	VAR OSQ130 OSQ170 OSQ200 RIAGENDR  mex_am--noir_nh RIDAGEYR 
 		 BMXBMI MCQ160C MCQ160L WHD020 WHD110 ALQ101 ALQ130
 		 cons OSQ010A ;
 /* On pourrait ajouter des options MIN =, MAX =, ROUND = 
-   pour dire à SAS les mins et maxs pour chacune de nos variables, dans leur
-   ordre d'apparition dans l'énoncé VAR (. si pas de min ou de max). ROUND fonctionne de
-   façon similaire et indique comment les variables doivent être arrondies (10, 1, 0.1, 0.01).
-   TOUTEFOIS, beaucoup de littérature sur les imputations suggèrent qu'il est mieux de ne pas
-   arrondir et de ne pas limiter les valeurs imputées, bien qu'elles peuvent sortir des
-   limites théoriques. Par ailleurs, les options MIN et MAX font souvent en sorte de
-   faire échouer l'imputation.*/
+   pour dire Ã  SAS les mins et maxs pour chacune de nos variables, dans leur
+   ordre d'apparition dans l'Ã©noncÃ© VAR (. si pas de min ou de max). ROUND fonctionne de
+   faÃ§on similaire et indique comment les variables doivent Ãªtre arrondies (10, 1, 0.1, 0.01).
+   TOUTEFOIS, beaucoup de littÃ©rature sur les imputations suggÃ¨rent qu'il est mieux de ne pas
+   arrondir et de ne pas limiter les valeurs imputÃ©es, bien qu'elles peuvent sortir des
+   limites thÃ©oriques. Par ailleurs, les options MIN et MAX font souvent en sorte de
+   faire Ã©chouer l'imputation.*/
 
-	MCMC NBITER = 200 /*Nombre de "burn-in iterations", la première série inutilisée*/
-		 NITER = 100 /*Nombre d'itérations entre chaque imputation conservée (1/100)*/
+	MCMC NBITER = 200 /*Nombre de "burn-in iterations", la premiÃ¨re sÃ©rie inutilisÃ©e*/
+		 NITER = 100 /*Nombre d'itÃ©rations entre chaque imputation conservÃ©e (1/100)*/
 		 PLOTS = (ALL ACF(NLAG = 50)); /*Pour faire afficher les graphiques diagnostics*/
-RUN; /*Très court à exécuter en comparaison avec l'imputation par équations chainées!*/
+RUN; /*TrÃ¨s court Ã  exÃ©cuter en comparaison avec l'imputation par Ã©quations chainÃ©es!*/
 /*Les graphiques semblent corrects*/
 
 PROC MEANS DATA = osteo_mi MIN MEAN MAX;
@@ -79,22 +79,22 @@ ennuyeux...*/
 PROC FREQ DATA = osteo_mi;
 	TABLE cons;
 RUN;
-/*... particulièrement pour la variable d'exposition!*/
+/*... particuliÃ¨rement pour la variable d'exposition!*/
 
 DATA osteo_mi2;
 	SET osteo_mi;
-	/*Puisqu'il y avait très peu de données manquantes
-	pour la réponse, j'arrondi arbitrairement à 0.5*/
+	/*Puisqu'il y avait trÃ¨s peu de donnÃ©es manquantes
+	pour la rÃ©ponse, j'arrondi arbitrairement Ã  0.5*/
 	IF OSQ010A < 1.5 THEN OSQ010A = 1;
 	ELSE OSQ010A = 2;
 RUN;
 
 /*
-Pour combiner le résultats, nous utiliserons MIANALYZE,
-il faudra sortir des résultats de nos analyses pour les
-fournir à MIANALYZE;
+Pour combiner le rÃ©sultats, nous utiliserons MIANALYZE,
+il faudra sortir des rÃ©sultats de nos analyses pour les
+fournir Ã  MIANALYZE;
 Dans l'aide de SAS pour MIANALYZE, je trouve un exemple
-qui utilise PROC LOGISTIC, je fais un copié-collé de la syntaxe.
+qui utilise PROC LOGISTIC, je fais un copiÃ©-collÃ© de la syntaxe.
 
 proc logistic data=outfish2;
    class Species;
@@ -116,8 +116,8 @@ PROC LOGISTIC DATA = osteo_mi2; *Pas d'option noprint possible;
 		 cons SEQN / LINK = logit ; 
 	ODS OUTPUT ParameterEstimates=lgsparms;
 RUN;
-*Je n'ai regardé que quelques imputations, mais pour chacune, 
-la consommation est associée à une réduction du risque de fracture;
+*Je n'ai regardÃ© que quelques imputations, mais pour chacune, 
+la consommation est associÃ©e Ã  une rÃ©duction du risque de fracture;
 
 PROC MIANALYZE PARMS = lgsparms;
 	MODELEFFECTS Intercept cons OSQ130 OSQ170 OSQ200 RIAGENDR mex_am aut_hisp blanc_nh noir_nh RIDAGEYR 
@@ -126,4 +126,4 @@ RUN;
 *RC = exp(-0.674242) = 0.51
 IC = (exp(-1.16713), exp(-0.18135)) = (0.31, 0.83)
  
-pas très différent de ce qu'on avait trouvé avec l'approche marginale; 
+pas trÃ¨s diffÃ©rent de ce qu'on avait trouvÃ© avec l'approche marginale; 
