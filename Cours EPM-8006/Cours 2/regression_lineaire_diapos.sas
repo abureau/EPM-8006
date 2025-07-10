@@ -2,15 +2,15 @@ ODS HTML CLOSE;
 ODS HTML;
 ODS GRAPHICS OFF; /*Je ferme les graphiques pour sauver du temps de roulement de programmes*/
 
-/*Importation des données*/
-PROC IMPORT DATAFILE = "C:\Users\AlexandreBureau\Documents\EPM-8006\donnees\fram1.csv"
+/*Importation des donnÃ©es*/
+PROC IMPORT DATAFILE = "/workspaces/myfolder/DonnÃ©es EPM-8006/fram1.csv"
 	OUT = fram1
 	REPLACE
 	DBMS = CSV;
 RUN;
 
 
-/*Modèle de base*/
+/*ModÃ¨le de base*/
 PROC REG DATA = fram1; /*MCO*/
 	MODEL SYSBP = Sex Age BMI / CLB;
 RUN; QUIT;
@@ -24,7 +24,7 @@ PROC MIXED DATA = fram1; /*MV*/
 RUN;
 
 
-/*Tests d'hypothèses simultanés et contrastes*/
+/*Tests d'hypothÃ¨ses simultanÃ©s et contrastes*/
 DATA fram1b;
 	SET fram1;
 	sexXcursmoke = sex*cursmoke;
@@ -48,7 +48,7 @@ PROC MIXED DATA = fram1; /*MV*/
 RUN;
 
 
-/*Linéarité*/
+/*LinÃ©aritÃ©*/
 PROC REG DATA = fram1; /*MCO*/
 	MODEL SYSBP = Sex Age BMI;
 	OUTPUT OUT = sortie STUDENT = resid;
@@ -69,11 +69,11 @@ PROC SGPLOT DATA = sortie;
 	REFLINE 0;
 RUN;
 
-/* Même graphique avec proc loess 
+/* MÃªme graphique avec proc loess 
    L'option plots = fitplot requis pour produire courbe de lissage 
-   L'option select permet de choisir le degré de lissage. 
-   Pour l'exprimer en terme de degrés de liberté, utiliser df1(k) 
-   où k est le nombre de degrés de liberté.
+   L'option select permet de choisir le degrÃ© de lissage. 
+   Pour l'exprimer en terme de degrÃ©s de libertÃ©, utiliser df1(k) 
+   oÃ¹ k est le nombre de degrÃ©s de libertÃ©.
 */
 ODS GRAPHICS ON; 
 PROC LOESS DATA = sortie plots(maxpoints=none) = fitplot;
@@ -92,7 +92,7 @@ PROC MIXED DATA = fram1 EMPIRICAL; /*MV*/
 	REPEATED / SUBJECT = RANDID TYPE = VC;
 RUN;
 
-/*Normalité*/
+/*NormalitÃ©*/
 PROC UNIVARIATE DATA = sortie;
 	VAR Studentresid;
 	QQPLOT Studentresid / NORMAL (MU = 0 SIGMA = 1);
@@ -103,7 +103,7 @@ PROC REG DATA = fram1; /*MCO*/
 	MODEL SYSBP = Sex Age BMI / VIF;
 RUN; QUIT;
 
-/*Données influentes*/
+/*DonnÃ©es influentes*/
 PROC REG DATA = fram1; /*MCO*/
 	MODEL SYSBP = Sex Age BMI / INFLUENCE;
 	OUTPUT OUT = sortie COOKD = Cook;
