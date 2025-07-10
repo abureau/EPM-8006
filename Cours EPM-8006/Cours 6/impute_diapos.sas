@@ -1,4 +1,4 @@
-PROC IMPORT DATAFILE = "C:\Users\etudiant\Documents\EPM-8006\donnees\osteo5.csv"
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/osteo5.csv"
 	OUT = osteo
 	DBMS = CSV
 	REPLACE;
@@ -8,10 +8,10 @@ proc freq data=osteo;
 table alq130*alq101;
 run;
 
-/* Il y a des valeurs manquantes de alq130 (nombre moyen de boissons alcoolisées par jour) pour des
-   sujets qui ont répondu "non" à la question alq101 (a bu au moins 12 boissons alcoolisées au cours de l'année).
-   Il ne s'agit pas de données manquantes structurelles, puisqu'on peut inférer que alq130 = 0 si alq101 = "non".
-   Il y a aussi des incohérences avec alq101 = "non" et alq130 > 0.
+/* Il y a des valeurs manquantes de alq130 (nombre moyen de boissons alcoolisÃ©es par jour) pour des
+   sujets qui ont rÃ©pondu "non" Ã  la question alq101 (a bu au moins 12 boissons alcoolisÃ©es au cours de l'annÃ©e).
+   Il ne s'agit pas de donnÃ©es manquantes structurelles, puisqu'on peut infÃ©rer que alq130 = 0 si alq101 = "non".
+   Il y a aussi des incohÃ©rences avec alq101 = "non" et alq130 > 0.
    On remplit et corrige des valeurs de alq130 en supposant que alq101 est correct*/
 data osteo;
 set osteo;
@@ -20,7 +20,7 @@ run;
 
 /*************************Approche marginale**********************************/
 
-*On va considérer consommation régulière ou variée vs jamais consommation régulière
+*On va considÃ©rer consommation rÃ©guliÃ¨re ou variÃ©e vs jamais consommation rÃ©guliÃ¨re
 pour avoir une exposition binaire.;
 DATA osteo_bin;
 	SET osteo;
@@ -31,7 +31,7 @@ DATA osteo_bin;
 		 cons SEQN OSQ010A;
 RUN;
 
-*Je fais d'abord 0 imputations, juste pour connaitre mon taux de données manquantes;
+*Je fais d'abord 0 imputations, juste pour connaitre mon taux de donnÃ©es manquantes;
 
 PROC MI DATA = osteo_bin NIMPUTE = 0;
 	VAR  OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
@@ -53,8 +53,8 @@ PROC MI DATA = osteo_bin NIMPUTE = 20 OUT = osteo_mi SEED = 75989215;
 		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A);
 	FCS LOGISTIC(RIAGENDR = OSQ130 OSQ170 OSQ200 RIDRETH1 RIDAGEYR 
 		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A);
-	* La variable ethnicité est nominale, il faut un modèle 
-		 polytomique, spécifié avec l'option glogit;
+	* La variable ethnicitÃ© est nominale, il faut un modÃ¨le 
+		 polytomique, spÃ©cifiÃ© avec l'option glogit;
 	FCS LOGISTIC(RIDRETH1 = OSQ130 OSQ170 OSQ200 RIAGENDR RIDAGEYR 
 		 BMXBMI WHD020 WHD110 ALQ101 ALQ130 cons OSQ010A / LINK = GLOGIT);
 	FCS REGPMM(RIDAGEYR = OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 
@@ -75,7 +75,7 @@ PROC MI DATA = osteo_bin NIMPUTE = 20 OUT = osteo_mi SEED = 75989215;
 		  BMXBMI WHD020 WHD110 ALQ130 ALQ101 cons);
 RUN;
 
-/* On modélise la cote de fracture de la hanche (OSQ010A) */
+/* On modÃ©lise la cote de fracture de la hanche (OSQ010A) */
 PROC LOGISTIC DATA = osteo_mi;
 	CLASS RIDRETH1;
 	BY _imputation_;
