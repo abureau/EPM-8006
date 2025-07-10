@@ -1,11 +1,11 @@
 /**** Importation des donnees ****/
-PROC IMPORT DATAFILE = "C:\Users\ALBUR7\OneDrive - Université Laval\Documents\EPM-8006\donnees\fram1.csv"
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/fram1.csv"
     OUT = fram1
     REPLACE
     DBMS = CSV;
 RUN;
 
-/* Estimation d'un modèle logistique du tabagisme et calcul de probabilité prédites */
+/* Estimation d'un modÃ¨le logistique du tabagisme et calcul de probabilitÃ© prÃ©dites */
 proc logistic data=fram1 descending;
    model cursmoke = age bmi sex;
    output out=propension pred=prob;
@@ -18,7 +18,7 @@ run;
 proc sort data=propension;
 by randid;
 run;
-/* Calcul du poids de chaque sujet (ajout d'une variable bidon pour que le merge répète la valeur de la moyenne) */
+/* Calcul du poids de chaque sujet (ajout d'une variable bidon pour que le merge rÃ©pÃ¨te la valeur de la moyenne) */
 
 data propension;
   set propension;
@@ -27,7 +27,7 @@ data propension;
   bidon = 1;
 run;
 
-/* vérification de l'étendue des valeurs des poids*/
+/* vÃ©rification de l'Ã©tendue des valeurs des poids*/
 proc means data=propension;
   var w;
 	OUTPUT OUT = ns MEAN = mipw;
