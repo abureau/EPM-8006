@@ -46,7 +46,7 @@ PROC LOGISTIC DATA = lyme descending PLOT(ONLY) = ROC;
 RUN;
 
 
-PROC IMPORT DATAFILE = "C:\Users\etudiant\Documents\EPM-8006\donnees\fram12.csv"
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/fram12.csv"
 	OUT = fram12
 	REPLACE
 	DBMS = CSV;
@@ -74,11 +74,11 @@ RUN;
 
 ods graphics on;
 
-/* Affichage de la courbe ROC à partir des prédictions du modèle (utile pour comparer plusieurs modèles)
-	Notez qu'il faut quand même un énoncé modèle, mais sans estimation avec l'option NOFIT*/
+/* Affichage de la courbe ROC Ã  partir des prÃ©dictions du modÃ¨le (utile pour comparer plusieurs modÃ¨les)
+	Notez qu'il faut quand mÃªme un Ã©noncÃ© modÃ¨le, mais sans estimation avec l'option NOFIT*/
 PROC LOGISTIC DATA = sortie DESCENDING PLOT(ONLY) = ROC;
 	MODEL diabetes2 =  lin_pred / NOFIT;
 	ROC "courbe ROC" lin_pred;
 run;
 
-/*Options CTABLE et PEVENT peuvent être utiles!!*/
+/*Options CTABLE et PEVENT peuvent Ãªtre utiles!!*/
