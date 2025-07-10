@@ -1,22 +1,22 @@
-*On construit un modèle pour déterminer l'effet de la consommation de lait
+*On construit un modÃ¨le pour dÃ©terminer l'effet de la consommation de lait
 sur le risque de fracture de la hanche;
-/*Plus précisément, je vais considérer comme exposition la variable 
-BDQ229 : Consommation de lait régulière 5 fois par semaine	
-1= consommateur régulier de lait toute ma vie ou presque, y compris en enfance; 
-2= jamais été consommateur régulier de lait; 
-3= ma consommation de lait a varié au cours de ma vie – 
-j’ai parfois été consommateur régulier de lait;
+/*Plus prÃ©cisÃ©ment, je vais considÃ©rer comme exposition la variable 
+BDQ229 : Consommation de lait rÃ©guliÃ¨re 5 fois par semaine	
+1= consommateur rÃ©gulier de lait toute ma vie ou presque, y compris en enfance; 
+2= jamais Ã©tÃ© consommateur rÃ©gulier de lait; 
+3= ma consommation de lait a variÃ© au cours de ma vie â€“ 
+jâ€™ai parfois Ã©tÃ© consommateur rÃ©gulier de lait;
 
-et comme réponse OSQ010A (fracture de la hanche 1 = oui, 2 = non)
+et comme rÃ©ponse OSQ010A (fracture de la hanche 1 = oui, 2 = non)
 
 Nous estimerons un effet conditionnel
-avec une approche bayésienne.
+avec une approche bayÃ©sienne.
 
-Puisque le problème est très similaire à celui considéré pour la régression linéaire,
-je considérerai les mêmes facteurs potentiellement confondants.*/
+Puisque le problÃ¨me est trÃ¨s similaire Ã  celui considÃ©rÃ© pour la rÃ©gression linÃ©aire,
+je considÃ©rerai les mÃªmes facteurs potentiellement confondants.*/
 
-*J'importe le fichier osteo5 nettoyé.;
-PROC IMPORT DATAFILE = "C:\Users\etudiant\Documents\EPM-8006\donnees\osteo5.csv"
+*J'importe le fichier osteo5 nettoyÃ©.;
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/osteo5.csv"
 	OUT = osteo
 	DBMS = CSV
 	REPLACE;
@@ -32,10 +32,10 @@ set osteo;
 if alq101 = 2 then alq130 = 0;
 run;
 
-/* Approche des pseudo-données */
+/* Approche des pseudo-donnÃ©es */
 
-/* Pseudo-données pour coefficients de cons_reg et cons_var
-   On donne la valeur 1 pour les variables catégoriques car c'est la valeur de référence
+/* Pseudo-donnÃ©es pour coefficients de cons_reg et cons_var
+   On donne la valeur 1 pour les variables catÃ©goriques car c'est la valeur de rÃ©fÃ©rence
    On donne la valeur 0 aux variables quantitatives car on va les centrer*/
 data osteo_pseudo;
   input seqn  OSQ010A cons_reg cons_var  OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
@@ -58,17 +58,17 @@ run;
 
 data osteo2;
   set osteo;
-/* Ajout des variables strate et poids au jeu de données ostéo */
+/* Ajout des variables strate et poids au jeu de donnÃ©es ostÃ©o */
   strate = 1;
   poids = 1;
-  /* Centrage de l'âge, du BMI, du poids actuel et du poids il y a 10 ans */
+  /* Centrage de l'Ã¢ge, du BMI, du poids actuel et du poids il y a 10 ans */
   RIDAGEYR = RIDAGEYR - 50;
   BMXBMI = BMXBMI - 29;
   WHD020 = WHD020 - 177;
   WHD110 = WHD110 - 170;
 run;
 
-/* Ajout des pseudo données à la base de données */
+/* Ajout des pseudo donnÃ©es Ã  la base de donnÃ©es */
 data osteo_aug;
   set osteo2 osteo_pseudo;
 run;
@@ -81,51 +81,51 @@ freq poids;
 run;
 
 ODS GRAPHICS ON;
-TITLE "Modèle avec ajustement 2";
+TITLE "ModÃ¨le avec ajustement 2";
 PROC GENMOD DATA = osteo;
 	BAYES COEFFPRIOR = JEFFREYS 
 		  NBI = 1000 /*Nombre de Burn-in*/
 		  THINNING = 10 /*On garde 1/10*/
-		  NMC = 10000 /*Nombre d'itérations après les burn-in*/
+		  NMC = 10000 /*Nombre d'itÃ©rations aprÃ¨s les burn-in*/
 		  PLOTS = ALL; 
 	CLASS OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 ALQ101 MCQ160C MCQ160L /PARAM = GLM; *PARAM = GLM pour notre codification habituelle des effets;
 	MODEL  OSQ010A = cons_reg cons_var  OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
 				ALQ101 ALQ130 BMXBMI MCQ160C MCQ160L WHD020 WHD110 / DIST = binomial LINK = logit;
 RUN;
-*Il semble y avoir une forte auto-corrélation, 1/10 n'est probablement pas assez.;
+*Il semble y avoir une forte auto-corrÃ©lation, 1/10 n'est probablement pas assez.;
 
 
-*Beaucoup plus long, mais les résultats sont plus cohérents avec les résultats du MV (maximum de vraisemblance);
+*Beaucoup plus long, mais les rÃ©sultats sont plus cohÃ©rents avec les rÃ©sultats du MV (maximum de vraisemblance);
 ODS GRAPHICS ON;
-TITLE "Modèle avec ajustement 2";
+TITLE "ModÃ¨le avec ajustement 2";
 PROC GENMOD DATA = osteo;
 	BAYES COEFFPRIOR = JEFFREYS 
 		  NBI = 1000 /*Nombre de Burn-in*/
 		  THINNING = 100 /*On garde 1/100*/
-		  NMC = 100000 /*Nombre d'itérations après les burn-in, on fait 10x plus d'itérations pour garder
-		  le même nombre d'échantillon.*/
-		  PLOTS(LAGS = 100) = ALL; /*Jusqu'à quoi tracer le graphique d'auto-corrélation*/ 
+		  NMC = 100000 /*Nombre d'itÃ©rations aprÃ¨s les burn-in, on fait 10x plus d'itÃ©rations pour garder
+		  le mÃªme nombre d'Ã©chantillon.*/
+		  PLOTS(LAGS = 100) = ALL; /*Jusqu'Ã  quoi tracer le graphique d'auto-corrÃ©lation*/ 
 	CLASS OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 ALQ101 MCQ160C MCQ160L /PARAM = GLM; *PARAM = GLM pour notre codification habituelle des effets;
 	MODEL  OSQ010A = cons_reg cons_var  OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
 				ALQ101 ALQ130 BMXBMI MCQ160C MCQ160L WHD020 WHD110 / DIST = binomial LINK = logit;
 RUN;
 
 
-TITLE "Modèle avec ajustement 2";
+TITLE "ModÃ¨le avec ajustement 2";
 PROC GENMOD DATA = osteo;
-	BAYES COEFFPRIOR = UNIFORM /*L'estimation échoue, relativement courant avec les lois impropres*/
+	BAYES COEFFPRIOR = UNIFORM /*L'estimation Ã©choue, relativement courant avec les lois impropres*/
 		  NBI = 1000 /*Nombre de Burn-in*/
 		  THINNING = 100 /*On garde 1/10*/
-		  NMC = 100000 /*Nombre d'itérations après les burn-in*/
+		  NMC = 100000 /*Nombre d'itÃ©rations aprÃ¨s les burn-in*/
 		  PLOTS(LAGS = 100) = ALL;
 	CLASS OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 ALQ101 MCQ160C MCQ160L /PARAM = GLM; *PARAM = GLM pour notre codification habituelle des effets;
 	MODEL  OSQ010A = cons_reg cons_var  OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
 				ALQ101 ALQ130 BMXBMI MCQ160C MCQ160L WHD020 WHD110 / DIST = binomial LINK = logit;
 RUN;
 
-/*Définition de la loi a priori,
-je la prends informative, à titre d'exemple,
-pour les paramètres associés à la consommatin de lait*/
+/*DÃ©finition de la loi a priori,
+je la prends informative, Ã  titre d'exemple,
+pour les paramÃ¨tres associÃ©s Ã  la consommatin de lait*/
 DATA prior;
    INPUT _type_ $ Intercept cons_reg cons_var  OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH11 RIDRETH12 RIDRETH13 RIDRETH14 RIDAGEYR 
 				ALQ101 ALQ130 BMXBMI MCQ160C MCQ160L WHD020 WHD110;
@@ -136,17 +136,17 @@ Mean 0.0 -1.389 -0.693 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 RUN;
 
 
-TITLE "Modèle avec ajustement 2";
+TITLE "ModÃ¨le avec ajustement 2";
 PROC GENMOD DATA = osteo;
 	BAYES COEFFPRIOR = NORMAL (INPUT = prior) 
 		  NBI = 1000 /*Nombre de Burn-in*/
 		  THINNING = 100 /*On garde 1/100*/
-		  NMC = 100000 /*Nombre d'itérations après les burn-in*/
+		  NMC = 100000 /*Nombre d'itÃ©rations aprÃ¨s les burn-in*/
 		  PLOTS(LAGS = 100) = ALL;
 	CLASS OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 ALQ101 MCQ160C MCQ160L /PARAM = GLM; *PARAM = GLM pour notre codification habituelle des effets;
 	MODEL  OSQ010A = cons_reg cons_var  OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1 RIDAGEYR 
 				ALQ101 ALQ130 BMXBMI MCQ160C MCQ160L WHD020 WHD110 / DIST = binomial LINK = logit;
 RUN;
-/*1/100 semble fortement insuffisant en regardant les graphiques d'auto-corrélations
+/*1/100 semble fortement insuffisant en regardant les graphiques d'auto-corrÃ©lations
 Les diagnostiques de Geweke semblent aussi indiquer que le nombre de burn-in est insuffisant. 
 On n'essaiera pas de corriger en laboratoire, car le programme deviendrait certainement beaucoup trop long!*/
