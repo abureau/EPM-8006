@@ -2,8 +2,8 @@ ODS HTML CLOSE;
 ODS HTML;
 ODS GRAPHICS OFF; /*Je ferme les graphiques pour sauver du temps de roulement de programmes*/
 
-/*Importation des donn�es*/
-PROC IMPORT DATAFILE = "C:\Users\etudiant\Documents\EPM-8006\donnees\fram1.csv"
+/*Importation des données*/
+PROC IMPORT DATAFILE = "/workspaces/workspace/Données EPM-8006/fram1.csv"
 	OUT = fram1
 	REPLACE
 	DBMS = CSV;
