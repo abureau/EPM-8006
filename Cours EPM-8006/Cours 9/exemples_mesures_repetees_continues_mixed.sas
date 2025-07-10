@@ -1,18 +1,18 @@
-/*Lecture des donnÈes*/
+/*Lecture des donn√©es*/
 DATA seizure;
-	INFILE "seizure.data";
+	INFILE "/workspaces/workspace/Donn√©es EPM-8006/seizure.data";
 	INPUT ID Counts Visit TX Age Weeks;
 RUN;
 
-/*Afficher les donnÈes*/
+/*Afficher les donn√©es*/
 PROC PRINT DATA = seizure (OBS = 10); RUN;
 
-/*Le jeu de donnÈes est dans ce qu'on appelle un format long, c'est-‡-dire
-que chaque ligne reprÈsente une visite pour un sujet. C'est ce qu'il
+/*Le jeu de donn√©es est dans ce qu'on appelle un format long, c'est-√†-dire
+que chaque ligne repr√©sente une visite pour un sujet. C'est ce qu'il
 faut pour effectuer les analyses.*/
 
-/* CrÈer un jeu de donnÈes avec les valeurs au dÈpart
-placÈe dans des variables sÈparÈes*/
+/* Cr√©er un jeu de donn√©es avec les valeurs au d√©part
+plac√©e dans des variables s√©par√©es*/
 DATA baseline;
 	SET seizure;
 	WHERE Visit = 0;
@@ -32,7 +32,7 @@ DATA seizure2;
 RUN;
 
 
-/*ModËle mixte - 1*/
+/*Mod√®le mixte - 1*/
 PROC SORT DATA = seizure2; BY ID Visit; RUN;
 PROC MIXED DATA = seizure2;
 	CLASS ID TX(REF = first);
@@ -40,7 +40,7 @@ PROC MIXED DATA = seizure2;
 	REPEATED / SUBJECT = ID TYPE = AR(1);
 RUN;
 
-/*ModËle mixte - 2*/
+/*Mod√®le mixte - 2*/
 PROC SORT DATA = seizure2; BY ID Visit; RUN;
 PROC MIXED DATA = seizure2;
 	CLASS ID TX(REF = first);
@@ -48,7 +48,7 @@ PROC MIXED DATA = seizure2;
 	RANDOM intercept / SUBJECT = ID;
 RUN;
 
-/*ModËle mixte - 3 (avec Counts0 en covariable)*/
+/*Mod√®le mixte - 3 (avec Counts0 en covariable)*/
 PROC SORT DATA = seizure2; BY ID Visit; RUN;
 PROC MIXED DATA = seizure2;
 	CLASS ID TX(REF = first);
@@ -60,19 +60,19 @@ RUN;
 
 
 
-/*ModËle mixte*/
+/*Mod√®le mixte*/
 PROC SORT DATA = seizure2; BY ID Visit; RUN;
 PROC MIXED DATA = seizure2;
 	CLASS ID TX(REF = first);
-	ID ID Visit TX; /*Pour dire ‡ SAS comment identifier les obs*/
+	ID ID Visit TX; /*Pour dire √† SAS comment identifier les obs*/
 	MODEL counts = visit|TX / 
-		DDFM = BW /*MÈthode pour le calcul des dls, option KR pour les dls de K-R*/ 
+		DDFM = BW /*M√©thode pour le calcul des dls, option KR pour les dls de K-R*/ 
 		ALPHA = 0.05 
-		VCIRY /*Pour faire sortir les rÈsidus mis-‡-l'Èchelle*/
+		VCIRY /*Pour faire sortir les r√©sidus mis-√†-l'√©chelle*/
 		OUTPM = sortie OUTP = sortie2; 
 		/* (INFLUENCE (ITER = 5 EST) Pour faire afficher les distances de Cook*/
 	RANDOM intercept / SUBJECT = ID;
-RUN; /*Le graphique sortie par dÈfaut par SAS nous indique que
+RUN; /*Le graphique sortie par d√©faut par SAS nous indique que
 certaines observations sont potentiellement influentes*/
 
 DATA graphique;
@@ -99,20 +99,20 @@ RUN;
 
 		
 
-/*ModËle mixte*/
+/*Mod√®le mixte*/
 PROC SORT DATA = seizure2; BY ID Visit; RUN;
 PROC MIXED DATA = seizure2;
 	CLASS ID TX(REF = first);
-	ID ID Visit TX; /*Pour dire ‡ SAS comment identifier les obs*/
+	ID ID Visit TX; /*Pour dire √† SAS comment identifier les obs*/
 	MODEL counts = visit|TX / 
-		DDFM = BW /*MÈthode pour le calcul des dls, option KR pour les dls de K-R*/ 
+		DDFM = BW /*M√©thode pour le calcul des dls, option KR pour les dls de K-R*/ 
 		ALPHA = 0.05 
-		VCIRY /*Pour faire sortir les rÈsidus mis-‡-l'Èchelle*/
+		VCIRY /*Pour faire sortir les r√©sidus mis-√†-l'√©chelle*/
 		OUTPM = sortie OUTP = sortie2; 
 		/* (INFLUENCE (ITER = 5 EST) Pour faire afficher les distances de Cook*/
 	RANDOM intercept visit / SUBJECT = ID TYPE = UN;
 
-RUN; /*Le graphique sortie par dÈfaut par SAS nous indique que
+RUN; /*Le graphique sortie par d√©faut par SAS nous indique que
 certaines observations sont potentiellement influentes*/
 
 DATA graphique;
@@ -131,23 +131,23 @@ RUN;
 	
 
 
-/*ModËle mixte*/
+/*Mod√®le mixte*/
 PROC SORT DATA = seizure2; BY ID Visit; RUN;
 PROC MIXED DATA = seizure2;
 	CLASS ID TX(REF = first);
-	ID ID Visit TX; /*Pour dire ‡ SAS comment identifier les obs*/
+	ID ID Visit TX; /*Pour dire √† SAS comment identifier les obs*/
 	MODEL counts = visit|TX / 
-		DDFM = KR /*MÈthode pour le calcul des dls, option KR pour les dls de K-R*/ 
+		DDFM = KR /*M√©thode pour le calcul des dls, option KR pour les dls de K-R*/ 
 		ALPHA = 0.05 
-		VCIRY /*Pour faire sortir les rÈsidus mis-‡-l'Èchelle*/
+		VCIRY /*Pour faire sortir les r√©sidus mis-√†-l'√©chelle*/
 		INFLUENCE (ITER = 5 EST) /*Pour faire afficher les distances de Cook
 									les options ITER = 5 et EST ajoutent des
 									diagnostiques similaires aux DFBETAS, mais peuvent
-									rendre la procÈdure trËs longue ‡ exÈcuter.*/
+									rendre la proc√©dure tr√®s longue √† ex√©cuter.*/
 		OUTPM = sortie OUTP = sortie2;
 	RANDOM intercept visit / SUBJECT = ID TYPE = UN;
 	ODS OUTPUT Influence = Influence; /*Enregistrer les diagnostiques d'influence*/
-RUN; /*Le graphique sortie par dÈfaut par SAS nous indique que
+RUN; /*Le graphique sortie par d√©faut par SAS nous indique que
 certaines observations sont potentiellement influentes*/
 DATA influence2;
 	MERGE seizure2 influence;
@@ -165,12 +165,12 @@ PROC SGPLOT DATA = influence2;
 	REFLINE -0.08237;
 RUN;
 
-/* Calcul des valeurs prÈdites transformÈes */
+/* Calcul des valeurs pr√©dites transform√©es */
 data sortie2;
   set sortie;
 	predt = scaleddep - scaledresid;
 run;
-/* Diagramme de dispersion des rÈsidus transformÈs vs. valeurs prÈdites transformÈes */
+/* Diagramme de dispersion des r√©sidus transform√©s vs. valeurs pr√©dites transform√©es */
 PROC SGPLOT DATA = sortie2;
 	SCATTER X = predt Y = scaledresid;
 run;
