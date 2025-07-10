@@ -1,5 +1,5 @@
-/*Importation des donnÈes*/
-PROC IMPORT DATAFILE = "C:\Users\AlexandreBureau\Documents\EPM-8006\donnees\fram1.csv"
+/*Importation des donn√©es*/
+PROC IMPORT DATAFILE = "/workspaces/workspace/Donn√©es EPM-8006/fram1.csv"
 	OUT = fram1
 	REPLACE
 	DBMS = CSV;
@@ -30,8 +30,8 @@ ODS TRACE OFF;
 
 PROC PRINT DATA = estimates; RUN;
 
-/*Pour calculer le RERI ‡ partir des sorties, je
-dois passer ‡ un format large;*/
+/*Pour calculer le RERI √† partir des sorties, je
+dois passer √† un format large;*/
 
 DATA reri1; SET estimates; WHERE label = "homme fum vs femme non fum"; Terme1 = MeanEstimate; KEEP Terme1; RUN;
 DATA reri2; SET estimates; WHERE label = "homme non fum vs femme non fum"; Terme2 = MeanEstimate; KEEP Terme2; RUN;
@@ -47,10 +47,10 @@ PROC PRINT DATA = reri; RUN;
 /*Exemple 1 avec PROC SURVEYSELECT*/
 PROC SURVEYSELECT DATA = fram1b
 	METHOD = URS /*Unrestricted random sampling*/
-	SAMPRATE = 1 /*n pigÈ = n total*/
-	SEED = 571895 /*Germe pour contrÙler le hasard*/
-	REP = 1000 /*Nombre d'Èchantillons bootstrap*/
-	OUTHITS /*Option nÈcessaire*/
+	SAMPRATE = 1 /*n pig√© = n total*/
+	SEED = 571895 /*Germe pour contr√¥ler le hasard*/
+	REP = 1000 /*Nombre d'√©chantillons bootstrap*/
+	OUTHITS /*Option n√©cessaire*/
 	OUT = fram1b_boot; /*Sortie*/
 RUN;
 
@@ -138,5 +138,5 @@ run;
 %INCLUDE "C:\Users\AlexandreBureau\Documents\EPM-8006\cours bootstrap\jackboot.sas";
 
 %BOOT(DATA = fram1b, samples = 1000, stat = RERI);
-/*L'appel ‡ BOOTCI est trËs long ‡ exÈcuter*/
+/*L'appel √† BOOTCI est tr√®s long √† ex√©cuter*/
 %BOOTCI(METHOD = BCA, stat = RERI);
