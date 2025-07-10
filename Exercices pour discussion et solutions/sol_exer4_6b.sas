@@ -1,22 +1,22 @@
-/*Importation des données*/
-PROC IMPORT DATAFILE = "C:\Users\deta001\Dropbox\Travail\Cours\EPM8006\Automne 2015\Données\fram12.csv"
+/*Importation des donnÃ©es*/
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/fram12.csv"
 	OUT = fram12
 	REPLACE
 	DBMS = CSV;
 RUN;
 
-/*Vérification que l'importation s'est bien déroulée*/
+/*VÃ©rification que l'importation s'est bien dÃ©roulÃ©e*/
 PROC CONTENTS DATA = fram12 VARNUM; RUN;
 
 PROC PRINT DATA = fram12 (OBS = 20); RUN;
 
 /*Construction des nouvelles variables
-et ménage pour ne conserver que les variables pertinentes*/
+et mÃ©nage pour ne conserver que les variables pertinentes*/
 DATA fram12b;
 	SET fram12;
-	/*Il ne devrait pas y avoir de données manquantes,
+	/*Il ne devrait pas y avoir de donnÃ©es manquantes,
 	mais il faut normallement faire attention quand 
-	on utilise des énoncés IF et ELSE aux données manquantes*/
+	on utilise des Ã©noncÃ©s IF et ELSE aux donnÃ©es manquantes*/
 	IF sysbp1 ne . AND diabp1 ne . AND BPMEDS1 ne . THEN
 		IF sysbp1 > 140 OR diabp1 > 90 OR BPMEDS1 = 1 THEN hypertension1 = 1;
 		ELSE IF sysbp1 <= 140 AND diabp1 <= 90 AND BPMEDS1 = 0 THEN hypertension1 = 0;
@@ -31,22 +31,22 @@ PROC MEANS DATA = fram12b MEAN STD MIN Q1 MEDIAN Q3 MAX;
 	CLASS cursmoke2;
 	VAR age1 sex hypertension1 BMI1 educ1 prevchd1 hypertension2;
 RUN;
-/*Il y a de forts déséquilibres entre les deux groupes
-par rapport à la majorité des variables. Seul l'éducation 
-semble assez bien équilibrés.
-On constate aussi des valeurs assez extrêmes pour l'IMC,
-à garder en tête pour les analyses.*/
+/*Il y a de forts dÃ©sÃ©quilibres entre les deux groupes
+par rapport Ã  la majoritÃ© des variables. Seul l'Ã©ducation 
+semble assez bien Ã©quilibrÃ©s.
+On constate aussi des valeurs assez extrÃªmes pour l'IMC,
+Ã  garder en tÃªte pour les analyses.*/
 
-/*Ajustement du modèle de régression logistique*/
+/*Ajustement du modÃ¨le de rÃ©gression logistique*/
 
-/*Déterminer l'association brute*/
+/*DÃ©terminer l'association brute*/
 PROC GENMOD DATA = fram12b DESCENDING;
 	MODEL hypertension2 = cursmoke2 / dist=binomial link= log lrci;
 	estimate "tabagisme T2" cursmoke2 1;
 RUN;
 
-/*RR = 0.76 IC à 95% 0.70 à 0.83.
-Le tabagisme est associé à une réduction du risque
+/*RR = 0.76 IC Ã  95% 0.70 Ã  0.83.
+Le tabagisme est associÃ© Ã  une rÃ©duction du risque
 d'hypertension*/
 
 PROC genmod DATA = fram12b DESCENDING;
@@ -57,34 +57,34 @@ PROC genmod DATA = fram12b DESCENDING;
 	OUTPUT OUT = sortie DFBETA = dfbeta RESCHI = resid;
 RUN;
 
-/*Vérification des hypothèses du modèle*/
+/*VÃ©rification des hypothÃ¨ses du modÃ¨le*/
 
-/* On va se concentrer sur les résidus de Pearson. Les résidus de déviance ne sont pas appropriés ici
-   car ils seront calculés en supposant une distribution de Poisson alors que la distribution est en 
+/* On va se concentrer sur les rÃ©sidus de Pearson. Les rÃ©sidus de dÃ©viance ne sont pas appropriÃ©s ici
+   car ils seront calculÃ©s en supposant une distribution de Poisson alors que la distribution est en 
    fait binomiale */
 
-/*1. Linéarité*/
+/*1. LinÃ©aritÃ©*/
 PROC SGPLOT DATA = sortie;
 	SCATTER X = age1 Y = resid;
 	LOESS X = age1 Y = resid;
 	REFLINE 0;
-RUN; *Aucune tendance résiduelle;
+RUN; *Aucune tendance rÃ©siduelle;
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = bmi1 Y = resid;
 	LOESS X = bmi1 Y = resid;
 	REFLINE 0;
-RUN; *Très légère tendance dans les extrêmes,
-probablement due aux données extrêmes d'IMC;
+RUN; *TrÃ¨s lÃ©gÃ¨re tendance dans les extrÃªmes,
+probablement due aux donnÃ©es extrÃªmes d'IMC;
 
-/*2. Indépendance :
-Pas de problème à notre connaissance*/
+/*2. IndÃ©pendance :
+Pas de problÃ¨me Ã  notre connaissance*/
 
-/*3. Multicollinéarité*/
-/*On a déjà vérifié en 4.6a qu'aucune variable n'a de VIF > 10. Pas besoin de refaire car ne dépend pas
-  de la forme du modèle */
+/*3. MulticollinÃ©aritÃ©*/
+/*On a dÃ©jÃ  vÃ©rifiÃ© en 4.6a qu'aucune variable n'a de VIF > 10. Pas besoin de refaire car ne dÃ©pend pas
+  de la forme du modÃ¨le */
 
-/*4. Données extrêmes ou aberrantes*/
+/*4. DonnÃ©es extrÃªmes ou aberrantes*/
 DATA sortie2;
 	SET sortie;
 	absDFbeta = abs(DFbeta);
@@ -98,15 +98,15 @@ PROC SGPLOT DATA = sortie2;
 	NEEDLE X = randid Y = absDFbeta;
 RUN;
 
-/*Rien ne se démarque, pas de problème*/
+/*Rien ne se dÃ©marque, pas de problÃ¨me*/
 
-/*5. séparation, pas de problème, sinon on aurait eu
+/*5. sÃ©paration, pas de problÃ¨me, sinon on aurait eu
 un message dans la sortie de SAS*/
 
 /*6. Sur-dispersion:
 On est dans le cas bernouilli (parce qu'il
 y a des variables explicatives continues) et non binomial, on ne
-peut pas avoir ce problème*/
+peut pas avoir ce problÃ¨me*/
 
 /*Tout semble ok*/
 
@@ -117,8 +117,8 @@ PROC genmod DATA = fram12b DESCENDING;
 	estimate "tabagisme T2" cursmoke2 1;
 RUN;
 
-/*RR = 1.01, IC = 0.94 à 1.09 ,
-Les données ne permettent pas de conclure concernant l'effet du tabagisme
+/*RR = 1.01, IC = 0.94 Ã  1.09 ,
+Les donnÃ©es ne permettent pas de conclure concernant l'effet du tabagisme
 sur le risque d'hypertension.*/
 
 
