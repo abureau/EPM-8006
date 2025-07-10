@@ -1,11 +1,11 @@
-/* Lecture du jeu de données sur l'amenorrhée de FLW*/
+/* Lecture du jeu de donnÃ©es sur l'amenorrhÃ©e de FLW*/
 
 data amenorrhea;
-  infile "amenorrhea.dat";
+  infile "/workspaces/workspace/DonnÃ©es EPM-8006/amenorrhea.dat";
   input ID Dose temps Amenorrhea;
 run;
 
-/* Analyse des données disponibles  */
+/* Analyse des donnÃ©es disponibles  */
 
 proc genmod data=amenorrhea desc;
 class id;
@@ -17,7 +17,7 @@ run;
 
 /* Imputation multiple
 
-Transformation du format long en format large par transposition des mesures répétées */
+Transformation du format long en format large par transposition des mesures rÃ©pÃ©tÃ©es */
 proc transpose data=amenorrhea out=amenlarge prefix=temps;
 by ID;
 id temps;
@@ -25,7 +25,7 @@ var Amenorrhea;
 run;
 
 /* Ajout de la variable dose, fixe pour chaque sujet 
-   Il faut commencer par éliminer les duplicats.
+   Il faut commencer par Ã©liminer les duplicats.
 */
 proc sort data=amenorrhea out=amendose nodupkey;
 by ID;
@@ -37,12 +37,12 @@ by ID;
 drop temps amenorrhea;
 run;
 
-/* Vérification que la dose et la mesure au temps 1 prédisent la mesure au temps 2 */
+/* VÃ©rification que la dose et la mesure au temps 1 prÃ©disent la mesure au temps 2 */
 proc logistic data=amenlarge desc;
   model temps2 = temps1 dose;
 run;
 
-/* Imputation multiple des réponses des sujets perdus au suivi en exploitant la monotonicité */
+/* Imputation multiple des rÃ©ponses des sujets perdus au suivi en exploitant la monotonicitÃ© */
 proc mi data=amenlarge out=amenimpute seed=11;
 class temps1 temps2 temps3 temps4;
 var dose temps1 temps2 temps3 temps4;
@@ -62,7 +62,7 @@ drop temps1 temps2 temps3 temps4;
 run;
 
 
-/* Analyse avec le modèle proposé par FLW à la section 12.5 */
+/* Analyse avec le modÃ¨le proposÃ© par FLW Ã  la section 12.5 */
 proc genmod data=amenanalyse desc;
 by _imputation_;
 class id;
@@ -75,7 +75,7 @@ proc sort data=parms;
 by parm;
 
 /* Combinaison des estimations des imputations. Remarquez qu'au lieu de nommer chaque effet, 
-   on boucle sur tous les paramètres avec l'énoncé by*/
+   on boucle sur tous les paramÃ¨tres avec l'Ã©noncÃ© by*/
 proc mianalyze data=parms;
   modeleffects estimate;
   stderr stderr; 
@@ -83,11 +83,11 @@ proc mianalyze data=parms;
 ods output parameterEstimates=coefimpute;
   run;
 
-/* Méthode de pondération des observations */
+/* MÃ©thode de pondÃ©ration des observations */
 
 data contracep;
 
-     infile 'contracep.dat';
+     infile '/workspaces/workspace/DonnÃ©es EPM-8006/contracep.dat';
 
      input id dose temps y prevy r;
      
@@ -97,7 +97,7 @@ proc sort data=contracep;
 
 run;
 
-/* Analyse des données complètes pour vérifier qu'on obtient plus ou moins la même chose que précédemment */
+/* Analyse des donnÃ©es complÃ¨tes pour vÃ©rifier qu'on obtient plus ou moins la mÃªme chose que prÃ©cÃ©demment */
 proc genmod data=contracep desc;
 class id;
 model y = dose dose temps temps*temps dose*temps dose*temps*temps / dist=bin;
@@ -110,7 +110,7 @@ title1 Logistic Regression Model for Probability of Remaining in the Study;
 
 title2 Clinical Trial of Contracepting Women;
 
-/* Modèle de la probabilité d'observer la réponse y */ 
+/* ModÃ¨le de la probabilitÃ© d'observer la rÃ©ponse y */ 
 proc genmod descending data=contracep;
 
      class temps (param=ref ref="1");
@@ -123,7 +123,7 @@ proc genmod descending data=contracep;
 
 run;
 
-/* Si on voulait calculer un SIPCW, la procédure suivante nous donnerait le numérateur. Nous ne calculerons pas 
+/* Si on voulait calculer un SIPCW, la procÃ©dure suivante nous donnerait le numÃ©rateur. Nous ne calculerons pas 
 de SIPCW ici.
 proc genmod descending data = contracep;
 
@@ -197,7 +197,7 @@ title1 IPW-GEE Estimation of Marginal Logistic Regression Model for Odds of Amen
 title2 Clinical Trial of Contracepting Women;
 
  
-/* Estimation du modèle en pondérant les observations */
+/* Estimation du modÃ¨le en pondÃ©rant les observations */
 
 proc genmod descending data=combine;
 
@@ -206,13 +206,13 @@ proc genmod descending data=combine;
      class id;
 
      model y = dose temps temps*temps dose*temps dose*temps*temps / dist=bin link=logit;
-/* La seule structure de corrélation avec laquelle la pondération donnera des résultats valides est indépendance */
+/* La seule structure de corrÃ©lation avec laquelle la pondÃ©ration donnera des rÃ©sultats valides est indÃ©pendance */
      repeated subject=id / type=ind;
      output out=predipw p=pameno;
 run;
 
-/* L'utilisation de poids standardisés ne change pas les estimations robuste de la variance 
-et affecte peu les coefficients. Les coefficients s'éloignent un peu des estimations par imputation multiple */
+/* L'utilisation de poids standardisÃ©s ne change pas les estimations robuste de la variance 
+et affecte peu les coefficients. Les coefficients s'Ã©loignent un peu des estimations par imputation multiple */
 proc genmod descending data=combine2;
 
      weight nipw;
@@ -220,21 +220,21 @@ proc genmod descending data=combine2;
      class id;
 
      model y = dose temps temps*temps dose*temps dose*temps*temps / dist=bin link=logit;
-/* La seule structure de corrélation avec laquelle la pondération donnera des résultats valides est indépendance */
+/* La seule structure de corrÃ©lation avec laquelle la pondÃ©ration donnera des rÃ©sultats valides est indÃ©pendance */
      repeated subject=id / type=ind;
      output out=predipw p=pameno;
 run;
 
 
-/* Tableau de probabilités prédites en fonction du temps et de la dose */
+/* Tableau de probabilitÃ©s prÃ©dites en fonction du temps et de la dose */
 data predtab;
   set predipw;
   where id = 423 or id = 425;
   keep dose temps pameno;
 run;
 
-/* La pondération ipw ou nipw ne change pas les résultats si on a un modèle saturé incluant le temps
-   (on fait une analyse séparée à chaque temps de mesure)*/
+/* La pondÃ©ration ipw ou nipw ne change pas les rÃ©sultats si on a un modÃ¨le saturÃ© incluant le temps
+   (on fait une analyse sÃ©parÃ©e Ã  chaque temps de mesure)*/
 proc genmod descending data=combine2;
 
      weight nipw;
@@ -242,7 +242,7 @@ proc genmod descending data=combine2;
      class id temps;
 
      model y = dose|temps / dist=bin link=logit;
-/* La seule structure de corrélation avec laquelle la pondération donnera des résultats valides est indépendance */
+/* La seule structure de corrÃ©lation avec laquelle la pondÃ©ration donnera des rÃ©sultats valides est indÃ©pendance */
      repeated subject=id / type=ind;
      output out=predipw p=pameno;
 run;
