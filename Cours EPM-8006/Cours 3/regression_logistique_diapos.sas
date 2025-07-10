@@ -17,7 +17,7 @@ Exemple 2 - Regression logistique conditionnelle
 ODS GRAPHICS OFF; /*Je ferme les graphiques pour sauver du temps de roulement de programmes*/
 
 /**** Importation des donnees ****/
-PROC IMPORT DATAFILE = "C:\Users\denis talbot\Dropbox\Travail\Cours\EPM8006\Automne 2015\Donn�es\fram1.csv"
+PROC IMPORT DATAFILE = "/workspaces/workspace/Données EPM-8006/fram1.csv"
     OUT = fram1
     REPLACE
     DBMS = CSV;
@@ -159,7 +159,7 @@ RUN; QUIT; /* Ok - voir tableau "goodness of fit" */
 
 
 /******* Exemple 2 *******/
-PROC IMPORT DATAFILE = "C:\Users\denis talbot\Dropbox\Travail\Cours\EPM8006\Donnees\lowbwtm11.csv"
+PROC IMPORT DATAFILE = "/workspaces/workspace/Données EPM-8006/lowbwtm11.csv"
     OUT = lowbw
     REPLACE
     DBMS = CSV;
