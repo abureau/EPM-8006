@@ -1,55 +1,55 @@
 /*******Solution exercice 4.5*******/
 
-/*Importation des données*/
+/*Importation des donnÃ©es*/
 
-PROC IMPORT DATAFILE = "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2015\Données\fram1.csv"
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/fram1.csv"
 	OUT = fram1
 	DBMS = CSV
 	REPLACE;
 RUN;
 
-/*Vérifier que l'importation s'est bien déroulée*/
+/*VÃ©rifier que l'importation s'est bien dÃ©roulÃ©e*/
 PROC CONTENTS DATA = fram1 VARNUM; RUN;
 
 PROC PRINT DATA = fram1 (OBS = 20); RUN;
 
-/*On effectuerait dans une véritable analyse quelques
+/*On effectuerait dans une vÃ©ritable analyse quelques
 statistiques descriptives*/
 
 PROC LOGISTIC DATA = fram1 DESCENDING;
 /*A*/MODEL diabetes = cursmoke sex age sysbp bmi cursmoke*bmi / CL;
 /*B*/CONTRAST "effet fumeur" cursmoke 1, cursmoke*bmi 1;
 /*C*/ESTIMATE "RC fumeur vs n-fumeur IMC = 25" cursmoke 1 cursmoke*bmi 25 / CL EXP; 
-/*RC = 0.69, IC = 0.44 à 1.09*/
+/*RC = 0.69, IC = 0.44 Ã  1.09*/
 RUN;
 
 /*******Solution exercice 4.7*******/
 
-PROC IMPORT DATAFILE = "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2015\Données\lowbwtm11.xls"
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/lowbwtm11.xls"
 	OUT = lowbw
 	DBMS = XLS
 	REPLACE;
 RUN;
 
-/*Vérifier que l'importation s'est bien déroulée*/
+/*VÃ©rifier que l'importation s'est bien dÃ©roulÃ©e*/
 PROC CONTENTS DATA = lowbw VARNUM; RUN;
 
 PROC PRINT DATA = lowbw (OBS = 20); RUN;
 
 /*Normallement, on ferait quelques statistiques descriptives*/
 
-/*Il s'agit d'un jeu de données provenant d'une étude 
-cas-témoin appariée, on devra utiliser une régression logistique conditionnelle*/
+/*Il s'agit d'un jeu de donnÃ©es provenant d'une Ã©tude 
+cas-tÃ©moin appariÃ©e, on devra utiliser une rÃ©gression logistique conditionnelle*/
 PROC LOGISTIC DATA = lowbw DESCENDING;
-	CLASS low race pair / PARAM = REF; /*par défaut, la paramétrisation
-	utilisée par PROC LOGISTIC est étrange.*/
+	CLASS low race pair / PARAM = REF; /*par dÃ©faut, la paramÃ©trisation
+	utilisÃ©e par PROC LOGISTIC est Ã©trange.*/
 	MODEL low = smoke race age / CL;
 	STRATA pair;
-	/*L'énoncé STRATA permet d'effectuer une régression logistique conditionnelle.*/
+	/*L'Ã©noncÃ© STRATA permet d'effectuer une rÃ©gression logistique conditionnelle.*/
 RUN;
-/*RC = 3.711 IC à 95%: 1.397 9.858,
-le tabagisme est associé à une augmentation du risque
-de faible poids à la naissance*/
+/*RC = 3.711 IC Ã  95%: 1.397 9.858,
+le tabagisme est associÃ© Ã  une augmentation du risque
+de faible poids Ã  la naissance*/
 
 
 
