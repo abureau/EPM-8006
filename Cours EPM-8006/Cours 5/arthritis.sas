@@ -1,5 +1,5 @@
 data arthritis;
-     infile 'C:\Users\etudiant\Documents\EPM-8006\donnees\arthritis.txt';
+     infile '/workspaces/workspace/Donn√©es EPM-8006/arthritis.txt';
      input id trt age y1 y2 y3 y4;
 
 **********************************************************;
@@ -11,13 +11,13 @@ run;
 title1 Proportional odds regression model for global impression scale at month 6;
 title2 Arthritis Clinical Trial;
 
-* Analyse avec la procÈdure genmod;
+* Analyse avec la proc√©dure genmod;
 proc genmod des;
      model y4 = age trt / dist=mult link=cumlogit;
 	 estimate "trt" trt 1 / exp;
 run;
 
-* Analyse avec la procÈdure logistic;
+* Analyse avec la proc√©dure logistic;
 proc logistic des;
      model y4 = age trt;
 run;
