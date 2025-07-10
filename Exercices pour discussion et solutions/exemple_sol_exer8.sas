@@ -1,13 +1,13 @@
 /*Exemple de solution exercice 8.1*/
 
-/*Importation des données*/
-PROC IMPORT DATAFILE = "C:\Users\etudiant\Documents\EPM-8006\donnees\mscm.csv"
+/*Importation des donnÃ©es*/
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/mscm.csv"
 	OUT = mscm
 	REPLACE
 	DBMS = CSV;
 RUN;
 
-/*Vérifier que l'importation s'est bien déroulée*/
+/*VÃ©rifier que l'importation s'est bien dÃ©roulÃ©e*/
 PROC CONTENTS DATA = mscm; RUN;
 
 PROC PRINT DATA = mscm (OBS = 60); RUN;
@@ -26,7 +26,7 @@ RUN; /*Il y a bien une ligne par sujet par jour/
 PROC MEANS DATA = mscm MIN Q1 MEAN MEDIAN Q3 MAX;
 	WHERE day = 8; /*pour faire des statistiques par sujet 
 				(une seule ligne par sujet, notez que toutes les lignes
-				devraient être identiques en ce qui a trait aux caractéristiques
+				devraient Ãªtre identiques en ce qui a trait aux caractÃ©ristiques
 				au baseline)*/
 	VAR bStress;
 RUN;
@@ -36,7 +36,7 @@ PROC FREQ DATA = mscm;
 	TABLE bstress;
 RUN;
 
-/*Je vais catégoriser l'exposition d'intérêt
+/*Je vais catÃ©goriser l'exposition d'intÃ©rÃªt
 pour obtenir des statistiques descriptives
 en fonction du niveau d'exposition*/
 DATA mscm2;
@@ -67,17 +67,17 @@ PROC SGPLOT DATA = moyennes;
 	LOESS X = day Y = illness / GROUP = bstressCat NOMARKERS;
 	YAXIS MIN = 0 MAX = 0.3;
 RUN;
-/*Il y a beaucoup de variation dans les moyennes, mais la tendance semble pouvoir être bien approximée de façon linéaire*/
+/*Il y a beaucoup de variation dans les moyennes, mais la tendance semble pouvoir Ãªtre bien approximÃ©e de faÃ§on linÃ©aire*/
 
 PROC TABULATE DATA = mscm2;
 	WHERE day = 8;
 	CLASS education chlth mhlth bstressCat;
 	VAR married employed race csex housize billness;
-	TABLE (billness)*(mean = "moyenne" std = "ét") 
+	TABLE (billness)*(mean = "moyenne" std = "Ã©t") 
 		  (married employed race csex housize)*(sum = "n" * f = f9.0 mean = "%" * f = PERCENT7.3) 
 		  (education chlth mhlth)*(n = "n" COLPCTN = "%") n, bstressCat;
 RUN;
-/*Il faut regrouper ensemble des catégories à faibles fréquences*/
+/*Il faut regrouper ensemble des catÃ©gories Ã  faibles frÃ©quences*/
 
 DATA mscm3;
 	SET mscm2;
@@ -85,7 +85,7 @@ DATA mscm3;
 	IF education = 5 THEN education = 4;
 	IF chlth = 1 OR chlth = 2 THEN chlth = 3;
 	IF mhlth = 1 OR mhlth = 2 THEN mhlth = 3;
-	/* On en profite pour créer une 2e version de la variable day pour traiter en catégories */
+	/* On en profite pour crÃ©er une 2e version de la variable day pour traiter en catÃ©gories */
 	jour=day;
 RUN;
 
@@ -93,7 +93,7 @@ PROC TABULATE DATA = mscm3;
 	WHERE day = 8;
 	CLASS education chlth mhlth bstressCat;
 	VAR married employed race csex housize billness;
-	TABLE (billness)*(mean = "moyenne" std = "ét") 
+	TABLE (billness)*(mean = "moyenne" std = "Ã©t") 
 		  (married employed race csex housize)*(sum = "n" * f = f9.0 mean = "%" * f = PERCENT7.3) 
 		  (education chlth mhlth)*(n = "n" COLPCTN = "%") n, bstressCat;
 RUN;
@@ -109,14 +109,14 @@ PROC GENMOD DATA = mscm3 DESCENDING PLOTS = (DFBETA);
 	REPEATED SUBJECT = id / TYPE = un within=jour; 
 	OUTPUT OUT = sortie P = predit RESRAW = resid
 	DFBETA = _all_;
-	/*Puisque day est entré de façon continue,
+	/*Puisque day est entrÃ© de faÃ§on continue,
 	la ligne "bstress" du tableau de type 3 ne donne
 	pas l'effet "moyen" du stress initial.
-	On peut plutôt l'obtenir en déterminant l'effet au temps
+	On peut plutÃ´t l'obtenir en dÃ©terminant l'effet au temps
 	moyen :*/
 	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP;
 RUN; /*Le jour du milieu de suivi est (30 + 8)/2 = 19;*/
-/* Estimation du RR à 19 jours (IC à 95%) : 1.62 (0.81 - 3.26) */
+/* Estimation du RR Ã  19 jours (IC Ã  95%) : 1.62 (0.81 - 3.26) */
 
 PROC GENMOD DATA = mscm3 DESCENDING PLOTS = (DFBETA);
 	CLASS chlth mhlth education id jour / PARAM = REF;
@@ -125,10 +125,10 @@ PROC GENMOD DATA = mscm3 DESCENDING PLOTS = (DFBETA);
 	REPEATED SUBJECT = id / TYPE = ar(1) within=jour; 
 	OUTPUT OUT = sortie P = predit RESRAW = resid reschi=presid
 	DFBETA = _all_;
-	/*Puisque day est entré de façon continue,
+	/*Puisque day est entrÃ© de faÃ§on continue,
 	la ligne "bstress" du tableau de type 3 ne donne
 	pas l'effet "moyen" du stress initial.
-	On peut plutôt l'obtenir en déterminant l'effet au temps
+	On peut plutÃ´t l'obtenir en dÃ©terminant l'effet au temps
 	moyen :*/
 	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP;
 RUN; 
@@ -141,10 +141,10 @@ PROC GENMOD DATA = mscm3 DESCENDING PLOTS = (DFBETA);
 	REPEATED SUBJECT = id / TYPE = ar(1) within=jour; 
 	OUTPUT OUT = sortie P = predit RESRAW = resid
 	DFBETA = _all_;
-	/*Puisque day est entré de façon continue,
+	/*Puisque day est entrÃ© de faÃ§on continue,
 	la ligne "bstress" du tableau de type 3 ne donne
 	pas l'effet "moyen" du stress initial.
-	On peut plutôt l'obtenir en déterminant l'effet au temps
+	On peut plutÃ´t l'obtenir en dÃ©terminant l'effet au temps
 	moyen :*/
 	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP;
 RUN; 
@@ -153,19 +153,19 @@ PROC GENMOD DATA = mscm3 DESCENDING PLOTS = (DFBETA);
 	MODEL illness = day|bstress chlth mhlth education married
 					employed race csex housize billness / DIST = poisson LINK = log TYPE3 WALD;
 	REPEATED SUBJECT = id / TYPE = UN within=jour; 
-	OUTPUT OUT = sortie P = predit RESRAW = resid dfbeta=_all_;	/*Puisque day est entré de façon continue,
+	OUTPUT OUT = sortie P = predit RESRAW = resid dfbeta=_all_;	/*Puisque day est entrÃ© de faÃ§on continue,
 	la ligne "bstress" du tableau de type 3 ne donne
 	pas l'effet "moyen" du stress initial.
-	On peut plutôt l'obtenir en déterminant l'effet au temps
+	On peut plutÃ´t l'obtenir en dÃ©terminant l'effet au temps
 	moyen :*/
 	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP;
 RUN; 
-/* Estimation du RR à 19 jours (IC à 95%) : 1.71 (0.85 - 3.44) */
+/* Estimation du RR Ã  19 jours (IC Ã  95%) : 1.71 (0.85 - 3.44) */
 
 
-/*J'ai choisi la matrice UN, car c'était celle qui donnait le meilleur critère
-QIC. Notez que QIC peut être utilisé pour comparer des modèles variant autant
-dans leur partie aléatoire (REPEATED) que dans leur partie fixe lorsque
+/*J'ai choisi la matrice UN, car c'Ã©tait celle qui donnait le meilleur critÃ¨re
+QIC. Notez que QIC peut Ãªtre utilisÃ© pour comparer des modÃ¨les variant autant
+dans leur partie alÃ©atoire (REPEATED) que dans leur partie fixe lorsque
 la distribution de travail n'est pas NORMAL*/
 /*IND: QIC = 2904.4745
 AR(1): QIC = 2866.1171
@@ -174,10 +174,10 @@ UN: QIC = 2519.4361 */
 
 
 
-/*Vérification des hypothèses*/
+/*VÃ©rification des hypothÃ¨ses*/
 /*Dans le graphique des DFBETAs, je vois une ou deux observations potentiellement influentes.
-Concernant le DFBETA pour bstress, les valeurs extrêmes ont des valeurs élevées. Je vais donc trier
-mes valeurs de DFBeta3 de la plus grande à la plus petite pour repérer cette observation*/
+Concernant le DFBETA pour bstress, les valeurs extrÃªmes ont des valeurs Ã©levÃ©es. Je vais donc trier
+mes valeurs de DFBeta3 de la plus grande Ã  la plus petite pour repÃ©rer cette observation*/
 PROC SORT DATA = sortie; BY DESCENDING DFbeta_bstress; RUN;
 PROC PRINT DATA = sortie (OBS = 20);
 	VAR ID day bstress chlth mhlth education married
@@ -185,8 +185,8 @@ PROC PRINT DATA = sortie (OBS = 20);
 RUN;
 /*810503 8 0.8333333333 3 3 4 0 0 1 1 0 0.1666666667 0.15325 */
 
-/*Pour le DFBETA bstress*day, les valeurs extrêmes sont négatives. Je vais donc trier
-mes valeurs de DFBeta4 de la plus petite à la plus grande.*/
+/*Pour le DFBETA bstress*day, les valeurs extrÃªmes sont nÃ©gatives. Je vais donc trier
+mes valeurs de DFBeta4 de la plus petite Ã  la plus grande.*/
 PROC SORT DATA = sortie; BY DFbeta_daybstress; RUN;
 PROC PRINT DATA = sortie (OBS = 20);
 	WHERE DFBeta_daybstress ne .;
@@ -195,9 +195,9 @@ PROC PRINT DATA = sortie (OBS = 20);
 RUN;
 /*810503 8 0.8333333333 3 3 4 0 0 1 1 0 0.1666666667 -.007252670 */
 
-/*C'est la même observation qui apparaît influente pour les deux paramètres.*/
+/*C'est la mÃªme observation qui apparaÃ®t influente pour les deux paramÃ¨tres.*/
 
-/*Multicollinéarité*/	
+/*MulticollinÃ©aritÃ©*/	
 DATA binaire;
 	SET mscm3;
 	IF education ne . THEN DO;
@@ -222,10 +222,10 @@ PROC REG DATA = binaire;
 					married employed race csex housize billness / VIF;
 RUN; QUIT;
 /*ok sauf pour exposition et interaction - c'est un peu attendu qu'il y ait
-de la collinéarité entre l'exposition et l'interaction et on ne peut rien
+de la collinÃ©aritÃ© entre l'exposition et l'interaction et on ne peut rien
 y faire.*/
 
-/*Linéarité*/
+/*LinÃ©aritÃ©*/
 PROC SGPLOT DATA = sortie;
 	LOESS X = day Y = resid;
 	REFLINE 0;
@@ -253,7 +253,7 @@ PROC SGPLOT DATA = sortie;
 RUN;
 /*ok*/
 
-/*Je refais le modèle sans l'observation potentiellement influente.*/
+/*Je refais le modÃ¨le sans l'observation potentiellement influente.*/
 ODS GRAPHICS ON;
 PROC SORT DATA = mscm3; BY id day; RUN;
 PROC GENMOD DATA = mscm3 DESCENDING PLOTS = (DFBETA);
@@ -265,26 +265,26 @@ PROC GENMOD DATA = mscm3 DESCENDING PLOTS = (DFBETA);
 	OUTPUT OUT = sortie P = predit RESRAW = resid 
 	DFBETA = _all_;
  	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP;
-RUN; /*Les conclusions vont dans la même direction. 
-Les graphiques suggèrent qu'il pourrait rester des observations influentes...
-On pourrait continuer le processus, c'est-à-dire repérer la prochaine observation
-la plus influente et la retirer en guise d'analyse de sensibilité et vérifier si
-les conclusions sont modifiées.*/
+RUN; /*Les conclusions vont dans la mÃªme direction. 
+Les graphiques suggÃ¨rent qu'il pourrait rester des observations influentes...
+On pourrait continuer le processus, c'est-Ã -dire repÃ©rer la prochaine observation
+la plus influente et la retirer en guise d'analyse de sensibilitÃ© et vÃ©rifier si
+les conclusions sont modifiÃ©es.*/
 
 /*Conclusion (avec toutes obs) : 
-Nos données ne permettent pas de rejeter l'hypothèse que l'association entre
+Nos donnÃ©es ne permettent pas de rejeter l'hypothÃ¨se que l'association entre
 le stress maternel initial et le risque que l'enfant soit malade ne varie pas dans
-le mois suivant (p de l'interaction = 0.61). Un stress maternel initial plus élevé
-est associé dans nos données à un risque plus important que l'enfant soit malade dans
+le mois suivant (p de l'interaction = 0.61). Un stress maternel initial plus Ã©levÃ©
+est associÃ© dans nos donnÃ©es Ã  un risque plus important que l'enfant soit malade dans
 les jours du mois suivant, mais la puissance insuffisante ne
-permet pas de conclure concernant l'association réelle dans la population
-RR = 1.46 IC à 95%: (0.68 - 3.12). */
+permet pas de conclure concernant l'association rÃ©elle dans la population
+RR = 1.46 IC Ã  95%: (0.68 - 3.12). */
 
 
 /*Exemple de solution exercice 8.2*/
 
 PROC SORT DATA = mscm3; BY id day; RUN;
-/* MV par approximation de Laplace avec ordonnée à l'origine aléatoire, lien logit */ 
+/* MV par approximation de Laplace avec ordonnÃ©e Ã  l'origine alÃ©atoire, lien logit */ 
 PROC GLIMMIX DATA = mscm3 method=laplace;
 	CLASS chlth mhlth education id;
 	MODEL illness = day|bstress chlth mhlth education married
@@ -294,9 +294,9 @@ PROC GLIMMIX DATA = mscm3 method=laplace;
 	OUTPUT OUT = sortie STUDENT = resid PRED = predit;
 	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP CL;
 RUN; 
-/* Estimation du RC à 19 jours (IC à 95%) : 1.59 (0.62 - 4.05) */
+/* Estimation du RC Ã  19 jours (IC Ã  95%) : 1.59 (0.62 - 4.05) */
 
-/* MV par approximation de Laplace avec ordonnée à l'origine aléatoire, lien log */ 
+/* MV par approximation de Laplace avec ordonnÃ©e Ã  l'origine alÃ©atoire, lien log */ 
 PROC GLIMMIX DATA = mscm3 method=laplace;
 	CLASS chlth mhlth education id;
 	MODEL illness = day|bstress chlth mhlth education married
@@ -306,9 +306,9 @@ PROC GLIMMIX DATA = mscm3 method=laplace;
 	OUTPUT OUT = sortie STUDENT = resid PEARSON(ILINK) = presid PRED = predit;
 	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP CL;
 RUN; 
-/* Estimation du RR à 19 jours (IC à 95%) : 1.58 (0.74 - 3.35) */
+/* Estimation du RR Ã  19 jours (IC Ã  95%) : 1.58 (0.74 - 3.35) */
 
-/* MV par approximation de Laplace avec ordonnée à l'origine et pente aléatoire, lien logit */ 
+/* MV par approximation de Laplace avec ordonnÃ©e Ã  l'origine et pente alÃ©atoire, lien logit */ 
 PROC GLIMMIX DATA = mscm3 method=laplace;
 	CLASS chlth mhlth education id;
 	MODEL illness = day|bstress chlth mhlth education married
@@ -318,9 +318,9 @@ PROC GLIMMIX DATA = mscm3 method=laplace;
 	OUTPUT OUT = sortie STUDENT = resid PEARSON(ILINK) = presid PRED = predit;
 	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP CL;
 RUN; 
-/* Estimation du RC à 19 jours (IC à 95%) : 1.72 (0.61 - 4.89) */
+/* Estimation du RC Ã  19 jours (IC Ã  95%) : 1.72 (0.61 - 4.89) */
 
-/* MV par approximation de Laplace avec ordonnée à l'origine et pente aléatoire, lien log: ne converge pas */ 
+/* MV par approximation de Laplace avec ordonnÃ©e Ã  l'origine et pente alÃ©atoire, lien log: ne converge pas */ 
 
 
 /* Maximum d'une pseudo vraisemblance, lien logit */
@@ -329,31 +329,31 @@ PROC GLIMMIX DATA = mscm3 INFOCRIT = PQ;
 	MODEL illness = day|bstress chlth mhlth education married
 					employed race csex housize billness 
 		/ DIST = binomial LINK = logit DDFM = KR SOLUTION CL;
-	/* Formulation proposée dans les notes de cours. 
-	En principe, fonctionne seulement si les données sont complètes. */
+	/* Formulation proposÃ©e dans les notes de cours. 
+	En principe, fonctionne seulement si les donnÃ©es sont complÃ¨tes. */
 	*RANDOM _residual_ / SUBJECT = id TYPE = AR(1); 
-	/* Quand les données sont incomplètes, il faut préciser la variable qui indique le temps d'observation */
+	/* Quand les donnÃ©es sont incomplÃ¨tes, il faut prÃ©ciser la variable qui indique le temps d'observation */
 	RANDOM jour / SUBJECT = id TYPE = AR(1) residual; 
 	OUTPUT OUT = sortie STUDENT = resid PEARSON(ILINK) = presid PRED = predit;
 	ESTIMATE "bstress au jour 19" bstress 1 bstress*day 19 / EXP CL;
 RUN; 
-/* Estimation du RC à 19 jours (IC à 95%) : 1.57 (0.68 - 3.65) */
+/* Estimation du RC Ã  19 jours (IC Ã  95%) : 1.57 (0.68 - 3.65) */
 
 /*
 Choix de la matrice :
 VC: BIC = 18394.31 
 CS: BIC =  18287.21 
 AR(1): BIC = 17790.36
-UN: Trop long à exécuter...
+UN: Trop long Ã  exÃ©cuter...
 ARH(1): Ne converge pas...
-J'oublie donc les matrices hétérogènes
+J'oublie donc les matrices hÃ©tÃ©rogÃ¨nes
 TOEP: Ne converge pas...
 ANTE(1): Ne converge pas...
 
 Je choisis AR(1)...
 */
 
-/*Je ne revérifie pas les VIFs, fait en exercice 8.1*/
+/*Je ne revÃ©rifie pas les VIFs, fait en exercice 8.1*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = predit Y = resid;
@@ -365,7 +365,7 @@ PROC SGPLOT DATA = sortie;
 	LOESS X = predit Y = presid;
 	REFLINE 0;
 RUN;
-/*On n'est incapable de détecter des données influentes simplement avec ce graphique
+/*On n'est incapable de dÃ©tecter des donnÃ©es influentes simplement avec ce graphique
 (en tout cas, moi je ne pourrais pas)*/
 
 PROC SGPLOT DATA = sortie;
@@ -387,4 +387,4 @@ PROC SGPLOT DATA = sortie;
 	REFLINE 0;
 RUN; /*ok*/
 
-/*Les conclusions vont dans la même direction qu'avec les GEEs*/
+/*Les conclusions vont dans la mÃªme direction qu'avec les GEEs*/
