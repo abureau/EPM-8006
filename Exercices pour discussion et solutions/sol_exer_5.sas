@@ -1,7 +1,7 @@
 /*Solution exercice 5.2*/
 
-*J'importe le fichier osteo5 nettoyé.;
-PROC IMPORT DATAFILE = "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2014\Laboratoires\osteo5.csv"
+*J'importe le fichier osteo5 nettoyÃ©.;
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/osteo5.csv"
 	OUT = osteo
 	DBMS = CSV
 	REPLACE;
@@ -30,12 +30,12 @@ PROC FREQ DATA = osteo2;
 		 RIDRETH1;
 RUN;
 
-*Je fais d'abord 0 imputations, juste pour connaitre mon taux de données manquantes;
+*Je fais d'abord 0 imputations, juste pour connaitre mon taux de donnÃ©es manquantes;
 PROC MI DATA = osteo2 NIMPUTE = 0;
-RUN; *81% des données sont complètes, 20 imputations suffiront;
+RUN; *81% des donnÃ©es sont complÃ¨tes, 20 imputations suffiront;
 
-*J'utilise l'imputation MICE étant donné que mes variables sont de différents types;
-PROC MI DATA = osteo2 NIMPUTE = 20 OUT = osteo_mi SEED = 87419; /*SEED ou germe pour assurer d'avoir toujours le même hasard*/
+*J'utilise l'imputation MICE Ã©tant donnÃ© que mes variables sont de diffÃ©rents types;
+PROC MI DATA = osteo2 NIMPUTE = 20 OUT = osteo_mi SEED = 87419; /*SEED ou germe pour assurer d'avoir toujours le mÃªme hasard*/
 	VAR ALQ101 OSQ010A BMXBMI OSQ130 OSQ170 OSQ200 RIAGENDR
 		 RIDAGEYR RIDRETH1;
 	CLASS ALQ101 OSQ010A OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1;
@@ -47,22 +47,22 @@ PROC MI DATA = osteo2 NIMPUTE = 20 OUT = osteo_mi SEED = 87419; /*SEED ou germe 
 	FCS LOGISTIC(OSQ200 = ALQ101 OSQ010A BMXBMI OSQ130 OSQ170 RIAGENDR RIDAGEYR RIDRETH1);
 	FCS LOGISTIC(RIAGENDR = ALQ101 OSQ010A BMXBMI OSQ130 OSQ170 OSQ200 RIDAGEYR RIDRETH1);
 	FCS REGPMM(RIDAGEYR = ALQ101 OSQ010A BMXBMI OSQ130 OSQ170 OSQ200 RIAGENDR RIDRETH1);
-	FCS LOGISTIC(RIDRETH1 = ALQ101 OSQ010A BMXBMI OSQ130 OSQ170 OSQ200 RIAGENDR RIDAGEYR); /*Par défaut, lien cumlogit pour une variable multicatégorielle*/
+	FCS LOGISTIC(RIDRETH1 = ALQ101 OSQ010A BMXBMI OSQ130 OSQ170 OSQ200 RIAGENDR RIDAGEYR); /*Par dÃ©faut, lien cumlogit pour une variable multicatÃ©gorielle*/
 RUN;
 
 DATA osteo_mi2;
 	SET osteo_mi;
 	WHERE missingY = 0; *Je retire les obs avec Y manquant;
-	*Je crée des indicatrices pour RIDRETH1;
+	*Je crÃ©e des indicatrices pour RIDRETH1;
 	IF RIDRETH1 = 1 THEN mex_am = 1; ELSE mex_am = 0;
 	IF RIDRETH1 = 2 THEN aut_hisp = 1; ELSE aut_hisp = 0;
 	IF RIDRETH1 = 3 THEN blanc_nh = 1; ELSE blanc_nh = 0;
 	IF RIDRETH1 = 4 THEN noir_nh = 1; ELSE noir_nh = 0;
 RUN;
 
-*Calcul de l'association - il y a un exemple dans PROC MIANALYZE pour la régression logistique;
+*Calcul de l'association - il y a un exemple dans PROC MIANALYZE pour la rÃ©gression logistique;
 PROC LOGISTIC DATA = osteo_mi2 DESCENDING; 
-	BY _imputation_; *Un modèle pour chaque imputation;
+	BY _imputation_; *Un modÃ¨le pour chaque imputation;
 	MODEL OSQ010A = ALQ101 BMXBMI OSQ130 OSQ170 OSQ200 RIAGENDR
 		 RIDAGEYR mex_am aut_hisp blanc_nh noir_nh /COVB;
 	ODS OUTPUT ParameterEstimates=lgsparms;
@@ -77,11 +77,11 @@ PROC MIANALYZE PARMS = lgsparms;
 RUN;
 *RC = exp(-0.411760) = 0.66
 IC = (exp(-0.99651), exp(0.172992)) = (0.37, 1.19);
-*La consommation d'alcool semble associée à une réduction du
-risque de fracture de la hance. La nature transversale des données et
-le risque de confusion résiduelle empèche d'interpréter causalement
-cette association. Par ailleurs, une consommation de 12 boissons alcoolisées
-au cours d'une année n'est pas une consommation extrême. Il est donc possible
-que des consommations modérées avec un effet neutre ou même positif soient
-combinées avec des consommations élevées ayant un effet négatif dans la 
-variable d'exposition utilisée.
+*La consommation d'alcool semble associÃ©e Ã  une rÃ©duction du
+risque de fracture de la hance. La nature transversale des donnÃ©es et
+le risque de confusion rÃ©siduelle empÃ¨che d'interprÃ©ter causalement
+cette association. Par ailleurs, une consommation de 12 boissons alcoolisÃ©es
+au cours d'une annÃ©e n'est pas une consommation extrÃªme. Il est donc possible
+que des consommations modÃ©rÃ©es avec un effet neutre ou mÃªme positif soient
+combinÃ©es avec des consommations Ã©levÃ©es ayant un effet nÃ©gatif dans la 
+variable d'exposition utilisÃ©e.
