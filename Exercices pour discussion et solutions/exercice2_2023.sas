@@ -1,6 +1,6 @@
-libname modeli " C:\Users\etudiant\Documents\EPM-8006\donnees";
+libname modeli "/workspaces/workspace/Donn√©es EPM-8006";
 
-/* ## Recodage de la variable rÈponse et des variables explicatives */
+/* ## Recodage de la variable r√©ponse et des variables explicatives */
 data exe; set modeli.exe11_01;
 
 if satisf='tres'  then y=4;
@@ -13,70 +13,70 @@ if moment='pm'    then mom=1; else mom=0;
 run;
 
 
-/* Analyse sous l'hypothËse des cotes proportionnelles */
+/* Analyse sous l'hypoth√®se des cotes proportionnelles */
 
 proc logistic des;
  model y=mom ag mom*ag;
  freq f;
 run;
 
-/* On rejette de peu l'hypothËse nulle des cotes proportionnelles au niveau de signification 0.05. 
-On a le choix de poursuivre avec ce modËle, ou avec le modËle de rÈgression multinomiale non-ordonnÈe. */
+/* On rejette de peu l'hypoth√®se nulle des cotes proportionnelles au niveau de signification 0.05. 
+On a le choix de poursuivre avec ce mod√®le, ou avec le mod√®le de r√©gression multinomiale non-ordonn√©e. */
 
 
-/* 1- Poursuivre avec le modËle multinomial non-ordonnÈ (Analyse glogit) */
+/* 1- Poursuivre avec le mod√®le multinomial non-ordonn√© (Analyse glogit) */
 proc logistic;
  model y=mom ag mom*ag / link=glogit;
  freq f;
 run;
 
-/* Il n'y a pas d'Èvidence de modification de l'effet du moment de la journÈe par l'‚ge (Analyse des effets Type 3: mom*ag p = 0.7054).
-On estime donc les RCs conditionnels ‡ l'‚ge pour les divers niveaux de satisfaction d'une consultation en PM vs. AM dans un modËle 2 sans terme d'interaction. */
+/* Il n'y a pas d'√©vidence de modification de l'effet du moment de la journ√©e par l'√¢ge (Analyse des effets Type 3: mom*ag p = 0.7054).
+On estime donc les RCs conditionnels √† l'√¢ge pour les divers niveaux de satisfaction d'une consultation en PM vs. AM dans un mod√®le 2 sans terme d'interaction. */
 
 proc logistic;
  model y=mom ag / link=glogit;
  freq f;
 run;
 
-/* On observe donc que les patients sont plus portÈs ‡ rapporter des niveaux de satisfaction bas si leur visite est en PM plutÙt qu'en AM.
+/* On observe donc que les patients sont plus port√©s √† rapporter des niveaux de satisfaction bas si leur visite est en PM plut√¥t qu'en AM.
 
-On peut aussi estimer des RCs bruts sans ajuster pour l'‚ge puisque ce n'Ètait pas demandÈ dans la question.*/
+On peut aussi estimer des RCs bruts sans ajuster pour l'√¢ge puisque ce n'√©tait pas demand√© dans la question.*/
 proc logistic;
  model y=mom/ link=glogit;
  freq f;
 run;
 
-/* Les rÈsultats bruts suggËrent un rapport de cote d'insatisfaction plus grand entre une visite en PM vs. AM
-que lorsqu'on ajuste pour l'‚ge. Il peut s'agir simplement d'une diffÈrence de dÈfinition due ‡ la non-collapsibilitÈ du RC.
+/* Les r√©sultats bruts sugg√®rent un rapport de cote d'insatisfaction plus grand entre une visite en PM vs. AM
+que lorsqu'on ajuste pour l'√¢ge. Il peut s'agir simplement d'une diff√©rence de d√©finition due √† la non-collapsibilit√© du RC.
 
-2- Poursuivre avec le modËle de rÈgression ordinale avec cotes proportionnelles
+2- Poursuivre avec le mod√®le de r√©gression ordinale avec cotes proportionnelles
 
-On rapporte le RC pour des niveaux de satisfaction plus ÈlevÈs d'une consultation en PM vs. AM, 
-conditionnel ‡ l'‚ge.  */
+On rapporte le RC pour des niveaux de satisfaction plus √©lev√©s d'une consultation en PM vs. AM, 
+conditionnel √† l'√¢ge.  */
 proc logistic des;
  model y=mom ag;
  freq f;
 run;
 /* 
 
-On remarque que l'hypothËse de cotes proportionnelles est plus fortement rejetÈe. On observe nÈanmoins 
-que les patients sont moins portÈs ‡ rapporter des niveaux de satisfaction plus ÈlevÈs si leur visite est en PM plutÙt qu'en AM. 
-(En d'autres termes, les patients sont plus portÈs ‡ rapporter des niveaux de satisfaction plus bas si leur visite est en PM plutÙt qu'en AM.)
+On remarque que l'hypoth√®se de cotes proportionnelles est plus fortement rejet√©e. On observe n√©anmoins 
+que les patients sont moins port√©s √† rapporter des niveaux de satisfaction plus √©lev√©s si leur visite est en PM plut√¥t qu'en AM. 
+(En d'autres termes, les patients sont plus port√©s √† rapporter des niveaux de satisfaction plus bas si leur visite est en PM plut√¥t qu'en AM.)
 
 
-On peut aussi estimer un RC brut sans ajuster pour l'‚ge puisque ce n'Ètait pas demandÈ dans la question.*/
+On peut aussi estimer un RC brut sans ajuster pour l'√¢ge puisque ce n'√©tait pas demand√© dans la question.*/
 
 proc logistic des;
  model y=mom;
  freq f;
 run;
 
-/* Le RC brut est plus grand entre une visite en PM vs. AM que lorsqu'on ajuste pour l'‚ge. 
-Il peut s'agir simplement d'une diffÈrence de dÈfinition due ‡ la non-collapsibilitÈ du RC. 
-Les conclusions restent semblables ‡ celles en ajustant pour l'‚ge. 
-L'hypothËse de cotes proportionnelles n'est pas rejetÈe.
+/* Le RC brut est plus grand entre une visite en PM vs. AM que lorsqu'on ajuste pour l'√¢ge. 
+Il peut s'agir simplement d'une diff√©rence de d√©finition due √† la non-collapsibilit√© du RC. 
+Les conclusions restent semblables √† celles en ajustant pour l'√¢ge. 
+L'hypoth√®se de cotes proportionnelles n'est pas rejet√©e.
 
-Une autre alternative serait de procÈder ‡ une analyse alogit (catÈgories adjacentes)*/
+Une autre alternative serait de proc√©der √† une analyse alogit (cat√©gories adjacentes)*/
 proc logistic des;
  model y=mom ag mom*ag / link=alogit;
  freq f;
