@@ -1,4 +1,4 @@
-libname modeli " C:\Users\etudiant\Documents\EPM-8006\donnees";
+libname modeli "/workspaces/workspace/Donn√©es EPM-8006/";
 
 DATA EXM; SET modeli.CHP05;
 
@@ -12,15 +12,15 @@ proc logistic;
 model y=fume prem/link = glogit aggregate scale=none;
 run;
 
-/* Calcul de score de propension pour la scolaritÈ
+/* Calcul de score de propension pour la scolarit√©
 
-## DÈfinition de la variable rÈponse dichotomique */
+## D√©finition de la variable r√©ponse dichotomique */
 DATA EXM; SET modeli.CHP05;
 IF PDS=<2500 THEN Y=1;
 else Y=2;
 run;
 
-/* ModËle de prÈdiction de la scolaritÈ */
+/* Mod√®le de pr√©diction de la scolarit√© */
 PROC LOGISTIC DATA = exm;
 MODEL scol = fume age pdsm / LINK = GLOGIT;
 OUTPUT OUT = sortie P = pred;
@@ -37,6 +37,6 @@ class scol(ref='3') id / param=ref;
 MODEL y = scol / dist=bin;
 weight w;
   repeated subject=id / type=ind printmle;
-  estimate "non-diplÙmÈ" scol 0 1 /exp;
+  estimate "non-dipl√¥m√©" scol 0 1 /exp;
   estimate "secondaire" scol 1 0 /exp;
 RUN;
