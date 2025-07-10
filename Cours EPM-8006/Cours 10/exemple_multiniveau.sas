@@ -1,5 +1,5 @@
 PROC IMPORT OUT = mmmec
-	DATAFILE = "C:\Users\etudiant\Documents\EPM-8006\donnees\mmec.csv"
+	DATAFILE = "/workspaces/workspace/Donn√©es EPM-8006/mmec.csv"
 	REPLACE
 	DBMS = CSV;
 RUN;
@@ -36,12 +36,12 @@ PROC MIXED DATA = mmmec COVTEST EMPIRICAL;
 	RANDOM intercept / SUBJECT = region(nation);
 RUN;
 
-/* Calcul des valeurs prÈdites transformÈes */
+/* Calcul des valeurs pr√©dites transform√©es */
 data sortie2;
   set sortie;
 	predt = scaleddep - scaledresid;
 run;
-/* Diagramme de dispersion des rÈsidus transformÈs vs. valeurs prÈdites transformÈes */
+/* Diagramme de dispersion des r√©sidus transform√©s vs. valeurs pr√©dites transform√©es */
 PROC SGPLOT DATA = sortie2;
 	SCATTER X = predt Y = scaledresid;
 run;
