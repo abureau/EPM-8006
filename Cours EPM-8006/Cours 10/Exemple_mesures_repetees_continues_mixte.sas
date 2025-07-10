@@ -7,7 +7,7 @@ donnee vs le nombre de crise par semaine pre-traitement.*/
 
 /*Lecture des donnees*/
 DATA seizure;
-    INFILE "C:\Users\denis talbot\Dropbox\Travail\Cours\EPM8006\Donnees\seizure.data";
+    INFILE "/workspaces/workspace/Donn√©es EPM-8006/seizure.data";
     INPUT ID Counts Visit TX Age Weeks;
 RUN;
 
@@ -66,7 +66,7 @@ RUN;
 PROC TABULATE DATA = seizure2;
     CLASS VISIT TX;
     VAR RELCount;
-    TABLE TX, visit*RELCount = ""*(MEAN = "Moy" MEDIAN = "Med" STD = "…-T");
+    TABLE TX, visit*RELCount = ""*(MEAN = "Moy" MEDIAN = "Med" STD = "√â-T");
 RUN;
 
 
@@ -80,7 +80,7 @@ PROC MIXED DATA = seizure2; /*On peut ajouter ici une option METHOD = ML
         DDFM = BW /*Methode pour le calcul des dls, option KR pour les dls de K-R*/ 
         ALPHA = 0.05 
         VCIRY /*Pour faire sortir les residus mis-a-l'echelle*/
-        OUTPM = sortie /*Fichier contenant les residus mis-a-l'Èchelle*/
+        OUTPM = sortie /*Fichier contenant les residus mis-a-l'√©chelle*/
         INFLUENCE (ITER = 5 EST); /*Pour faire afficher les distances de Cook
                                     les options ITER = 5 et EST ajoutent des
                                     diagnostiques similaires aux DFBETAS, mais peuvent
@@ -205,7 +205,7 @@ pas non plus ete etudies dans cette etude.*/
     (equivalent a une correlation CS) :
 RANDOM intercept / SUBJECT = id; 
 
-1.2 OrdonnÈe aleatoire et effet aleatoire de visite pour le sujet :
+1.2 Ordonn√©e aleatoire et effet aleatoire de visite pour le sujet :
 
 RANDOM intercept visit / SUBJECT = id TYPE = UN; 
 
@@ -230,7 +230,7 @@ Considerer une relation lineaire.
 
 
 On pourrait normallement considerer utiliser un estimateur robuste
-pour la dependance. Toutefois, puisque la taille d'Èchantillon est
+pour la dependance. Toutefois, puisque la taille d'√©chantillon est
 petite et qu'il y a potentiellement des valeurs extremes, cette option
 n'est peut-etre pas ideale. Pour l'essayer, on ferait
 PROC MIXED DATA = seizure2 EMPIRICAL;
@@ -312,7 +312,7 @@ PROC MIXED DATA = seizure2;
     SLICE TX*VISIT / DIFF SLICEBY = visit ALPHA = 0.05;
 RUN;
 /*Les resultats ne sont pas extremement sensible au choix.
-UN est probablement favorise en raison des donnÈes extremes,
+UN est probablement favorise en raison des donn√©es extremes,
 ce qui peut donner l'impression que les variances residuelles
 different selon la visite*/
 
