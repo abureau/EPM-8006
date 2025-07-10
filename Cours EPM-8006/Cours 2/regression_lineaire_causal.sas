@@ -2,20 +2,20 @@ ODS HTML CLOSE;
 ODS HTML;
 ODS GRAPHICS OFF; /*Je ferme les graphiques pour sauver du temps de roulement de programmes*/
 
-/*Importation des données*/
-PROC IMPORT DATAFILE = "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2015\Données\fram1.csv"
+/*Importation des donnÃ©es*/
+PROC IMPORT DATAFILE = "/workspaces/myfolder/DonnÃ©es EPM-8006/fram1.csv"
 	OUT = fram1
 	REPLACE
 	DBMS = CSV;
 RUN;
 
-/*Vérifier que l'importation s'est bien déroulée*/
+/*VÃ©rifier que l'importation s'est bien dÃ©roulÃ©e*/
 PROC CONTENTS DATA = fram1 VARNUM; RUN;
 
 PROC PRINT DATA = fram1 (OBS = 10); RUN;
 
-/*Si le jeu de données n'avait pas déjà eu un identifiant,
-on aurait pu en créer un en faisant:
+/*Si le jeu de donnÃ©es n'avait pas dÃ©jÃ  eu un identifiant,
+on aurait pu en crÃ©er un en faisant:
 
 DATA fram1;
 	SET fram1;
@@ -33,9 +33,9 @@ PROC FREQ DATA = fram1;
 	TABLE sex cursmoke diabetes;
 RUN;
 
-/*En pratique, il est important de bien vérifier immédiatement s'il n'y aurait pas des erreurs
-dans le jeu de données. Par exemple, en étudiant davantage les données extrêmes découvertes.
-On peut aussi faire certaines vérifications logiques, par exemple que cursmoke = 0 si
+/*En pratique, il est important de bien vÃ©rifier immÃ©diatement s'il n'y aurait pas des erreurs
+dans le jeu de donnÃ©es. Par exemple, en Ã©tudiant davantage les donnÃ©es extrÃªmes dÃ©couvertes.
+On peut aussi faire certaines vÃ©rifications logiques, par exemple que cursmoke = 0 si
 cigpday = 0.*/
 
 PROC MEANS DATA = fram1;
@@ -45,40 +45,40 @@ RUN;
 
 /*********************EXEMPLE CONTEXTE CAUSAL*********************/
 
-/*On veut estimer l'effet du tabagisme sur la pression artérielle systolique.
-Puisqu'on dispose de données transversales, la tâche est plus difficile.
+/*On veut estimer l'effet du tabagisme sur la pression artÃ©rielle systolique.
+Puisqu'on dispose de donnÃ©es transversales, la tÃ¢che est plus difficile.
 On essaie de choisir les variables d'ajustement autant que possible en se basant
 sur nos connaissances du domaine d'application. Si on ne dispose pas de connaissances
-suffisantes pour construire un DAG complet, VanderWeele et Shpitser (2011) suggèrent
+suffisantes pour construire un DAG complet, VanderWeele et Shpitser (2011) suggÃ¨rent
 d'ajuster pour toutes les variables qui sont soient une cause de l'exposition, soit une
 cause de l'issue (et qui ne sont pas des effets de l'exposition !).
 
-J'ajuste pour l'âge, le sexe, l'IMC. Je n'ajuste pas pour la DBP qui est probablement
-influencée par le tabagisme. Pour le statut diabétique, la situation est plus compliquée.
-L'hypertension peut mener au ou aggraver les symptômes du diabète. Parallèlement, le diabète
-pourrait causer de l'hypertension en raison des dommages causés aux artères par le diabète. 
-Je décide d'ajuster pour le diabète, mais à titre d'étude de sensibilité, il serait bien
-d'également présenter un modèle sans ajustement pour le diabète. 
+J'ajuste pour l'Ã¢ge, le sexe, l'IMC. Je n'ajuste pas pour la DBP qui est probablement
+influencÃ©e par le tabagisme. Pour le statut diabÃ©tique, la situation est plus compliquÃ©e.
+L'hypertension peut mener au ou aggraver les symptÃ´mes du diabÃ¨te. ParallÃ¨lement, le diabÃ¨te
+pourrait causer de l'hypertension en raison des dommages causÃ©s aux artÃ¨res par le diabÃ¨te. 
+Je dÃ©cide d'ajuster pour le diabÃ¨te, mais Ã  titre d'Ã©tude de sensibilitÃ©, il serait bien
+d'Ã©galement prÃ©senter un modÃ¨le sans ajustement pour le diabÃ¨te. 
 
-Je dois également décider de la façon dont j'entre les variables dans le modèle. 
-Pour l'exposition, j'introduis à la fois les variables cursmoke et cigpday 
-(l'exposition sera représentée par deux variables). J'entre les variables
-AGE, BMI et CIGPDAY de façon linéaire pour simplifier. Si l'hypothèse de linéarité
-n'est pas respectée, j'apporterai les correctifs nécessaires. Les variables indicatrices (0/1) 
-des variables SEX, CURSMOKE et DIABETES seront entrées dans le modèle. Je n'inclus pas de 
+Je dois Ã©galement dÃ©cider de la faÃ§on dont j'entre les variables dans le modÃ¨le. 
+Pour l'exposition, j'introduis Ã  la fois les variables cursmoke et cigpday 
+(l'exposition sera reprÃ©sentÃ©e par deux variables). J'entre les variables
+AGE, BMI et CIGPDAY de faÃ§on linÃ©aire pour simplifier. Si l'hypothÃ¨se de linÃ©aritÃ©
+n'est pas respectÃ©e, j'apporterai les correctifs nÃ©cessaires. Les variables indicatrices (0/1) 
+des variables SEX, CURSMOKE et DIABETES seront entrÃ©es dans le modÃ¨le. Je n'inclus pas de 
 variables d'interaction. Toutefois, remarquons que pour le tabagisme, il y a une relation
-spéciale entre les deux variables (CIGPDAY = 0 <=> cursomke = 0).
+spÃ©ciale entre les deux variables (CIGPDAY = 0 <=> cursomke = 0).
 */
 
-/*Dans un contexte causal, il est généralement recommandé de présenter des statistiques
+/*Dans un contexte causal, il est gÃ©nÃ©ralement recommandÃ© de prÃ©senter des statistiques
 descritptives en fonction du statut d'exposition.
 (Moyenne + SD ou nombre + % selon le type de variable).
 Ce genre de tableau nous donne un indice de l'importance des variables
-potentiellement confondantes identifiées.
+potentiellement confondantes identifiÃ©es.
 
-Ces statistiques descriptives pourraient aussi me montrer que certaines catégories de
-variables catégoriques auraient des effectifs trop petits, ce qui pourrait m'inciter
-à combiner ensemble des catégories adjacentes.*/
+Ces statistiques descriptives pourraient aussi me montrer que certaines catÃ©gories de
+variables catÃ©goriques auraient des effectifs trop petits, ce qui pourrait m'inciter
+Ã  combiner ensemble des catÃ©gories adjacentes.*/
 
 PROC MEANS DATA = fram1 MEAN STD;
 	CLASS cursmoke;
@@ -89,46 +89,46 @@ PROC FREQ DATA = fram1;
 	TABLE (sex diabetes)*cursmoke;
 RUN;
 
-/*J'ajuste le modèle de régression linéaire et je fais sortir
-différents fichiers pour vérifier les hypothèses du modèle.
-PROC REG et PROC GLM peuvent être utilisés pour des estimations
-par les moindres carrés. PROC REG permet plus facilement la vérification
-des hypothèses.*/
+/*J'ajuste le modÃ¨le de rÃ©gression linÃ©aire et je fais sortir
+diffÃ©rents fichiers pour vÃ©rifier les hypothÃ¨ses du modÃ¨le.
+PROC REG et PROC GLM peuvent Ãªtre utilisÃ©s pour des estimations
+par les moindres carrÃ©s. PROC REG permet plus facilement la vÃ©rification
+des hypothÃ¨ses.*/
 
 PROC REG DATA = fram1;
 	MODEL SYSBP = cursmoke cigpday sex age bmi diabetes / VIF CLB;
 	OUTPUT OUT = sortie STUDENT = student P = predit;
 RUN; QUIT;
 
-/*1. Linéarité: à vérifier uniquement pour les variables dont on suppose
-dans le modèle que l'effet est linéaire (ici: CIGPDAY, AGE et BMI)*/
+/*1. LinÃ©aritÃ©: Ã  vÃ©rifier uniquement pour les variables dont on suppose
+dans le modÃ¨le que l'effet est linÃ©aire (ici: CIGPDAY, AGE et BMI)*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = cigpday Y = student;
 	LOESS X = cigpday Y = student;
 	REFLINE 0;
-RUN;  /*Aucune tendance résiduelle, hypothèse semble respectée.*/
+RUN;  /*Aucune tendance rÃ©siduelle, hypothÃ¨se semble respectÃ©e.*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = age Y = student;
 	LOESS X = age Y = student;
 	REFLINE 0;
-RUN;  /*Aucune tendance résiduelle, hypothèse semble respectée.
-(Par contre, on voit une forme d'entonoir qui pourrait être
-un signe d'hétéroscédasticité.)*/
+RUN;  /*Aucune tendance rÃ©siduelle, hypothÃ¨se semble respectÃ©e.
+(Par contre, on voit une forme d'entonoir qui pourrait Ãªtre
+un signe d'hÃ©tÃ©roscÃ©dasticitÃ©.)*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = bmi Y = student;
 	LOESS X = bmi Y = student;
 	REFLINE 0;
-RUN; /*On constate une légère tendance aux deux extrêmes qui
-pourrait être causée par des valeurs extrêmes de BMI.*/
+RUN; /*On constate une lÃ©gÃ¨re tendance aux deux extrÃªmes qui
+pourrait Ãªtre causÃ©e par des valeurs extrÃªmes de BMI.*/
 
-/* 2. Indépendance: Selon nos connaissances du contexte de 
-l'étude, il s'agirait d'observations indépendantes.*/
+/* 2. IndÃ©pendance: Selon nos connaissances du contexte de 
+l'Ã©tude, il s'agirait d'observations indÃ©pendantes.*/
 
-/* 3. Homoscédasticité : Nous avons déjà constaté un problème pour âge.
-Pour les variables cigpday et bmi, il ne semblait pas y avoir de problème.*/
+/* 3. HomoscÃ©dasticitÃ© : Nous avons dÃ©jÃ  constatÃ© un problÃ¨me pour Ã¢ge.
+Pour les variables cigpday et bmi, il ne semblait pas y avoir de problÃ¨me.*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = predit Y = student;
@@ -138,38 +138,38 @@ RUN; /*Il semble y avoir une certaine forme d'entonnoir*/
 PROC SGPLOT DATA = sortie;
 	SCATTER X = sex Y = student;
 	REFLINE 0;
-RUN; /*Les deux barres sont similaires - hypothèse respectée*/
+RUN; /*Les deux barres sont similaires - hypothÃ¨se respectÃ©e*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = cursmoke Y = student;
 	REFLINE 0;
-RUN;  /*Les deux barres sont similaires - hypothèse respectée*/
+RUN;  /*Les deux barres sont similaires - hypothÃ¨se respectÃ©e*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = diabetes Y = student;
 	REFLINE 0;
-RUN; /*Les deux barres semblent différentes, mais il faut se souvenir
-qu'il y a beaucoup moins de sujets diabétiques que non diabétiques.
-Si on calcule l'écart-type des résidus par catégorie :*/
+RUN; /*Les deux barres semblent diffÃ©rentes, mais il faut se souvenir
+qu'il y a beaucoup moins de sujets diabÃ©tiques que non diabÃ©tiques.
+Si on calcule l'Ã©cart-type des rÃ©sidus par catÃ©gorie :*/
 PROC MEANS DATA = sortie STD VAR;
 	CLASS diabetes;
 	VAR student;
-RUN; /*On constate une différence de 32% dans les écarts-types. 
-C'est une différence notable.*/
+RUN; /*On constate une diffÃ©rence de 32% dans les Ã©carts-types. 
+C'est une diffÃ©rence notable.*/
 
-/* 4. Normalité : Pas vraiment pertinent dans notre cas, car n est
+/* 4. NormalitÃ© : Pas vraiment pertinent dans notre cas, car n est
 assez grand.*/
 
 PROC UNIVARIATE DATA = sortie NORMAL;
 	VAR student;
 	QQPLOT student / NORMAL(MU = 0 SIGMA = 1);
-RUN; /*Il y a une légère déviation par rapport à la droite attendue*/
+RUN; /*Il y a une lÃ©gÃ¨re dÃ©viation par rapport Ã  la droite attendue*/
 	 
-/* 5. Tous les VIFs sont < 10, il ne semble donc pas y avoir de problème de
-multicollinéarité.*/
+/* 5. Tous les VIFs sont < 10, il ne semble donc pas y avoir de problÃ¨me de
+multicollinÃ©aritÃ©.*/
 
-/* 6. Données inlfuentes ou aberrantes: dans notre contexte, on
-s'intéresse à l'influence sur les paramètres associés à l'exposition*/
+/* 6. DonnÃ©es inlfuentes ou aberrantes: dans notre contexte, on
+s'intÃ©resse Ã  l'influence sur les paramÃ¨tres associÃ©s Ã  l'exposition*/
 
 PROC REG DATA = fram1;
 	MODEL SYSBP = cursmoke cigpday sex age bmi diabetes / INFLUENCE;
@@ -192,10 +192,10 @@ PROC SORT DATA = OutputStatistics; BY DESCENDING abs_DFB_cigpday; RUN;
 PROC PRINT DATA = OutputStatistics (OBS = 20);
 	VAR RANDID SYSBP cursmoke cigpday sex age bmi diabetes abs_DFB_cigpday;
 RUN;
-/*Il ne semble pas y avoir d'observations particulièrement influentes
-sur les paramètres associés au tabagisme.
+/*Il ne semble pas y avoir d'observations particuliÃ¨rement influentes
+sur les paramÃ¨tres associÃ©s au tabagisme.
 
-Si j'avais voulu supprimer l'observation 3533652, j'aurais pu exécuter le code:
+Si j'avais voulu supprimer l'observation 3533652, j'aurais pu exÃ©cuter le code:
 
 DATA fram1_1;
 	SET fram1;
@@ -203,10 +203,10 @@ DATA fram1_1;
 RUN;*/
 
 
-/*En somme, le problème principal semble être l'hétéroscédasticité.
-On pourrait considérer une transformation de la variable SYSBP. Une telle
-transformation va cependant rendre les résultats plus difficiles à interpréter.
-L'autre possibilité est d'utiliser un estimateur robuste :*/
+/*En somme, le problÃ¨me principal semble Ãªtre l'hÃ©tÃ©roscÃ©dasticitÃ©.
+On pourrait considÃ©rer une transformation de la variable SYSBP. Une telle
+transformation va cependant rendre les rÃ©sultats plus difficiles Ã  interprÃ©ter.
+L'autre possibilitÃ© est d'utiliser un estimateur robuste :*/
 
 
 /*Estimateur robuste*/
@@ -217,8 +217,8 @@ PROC REG DATA = fram1;
 	EffetTabagisme: TEST cursmoke = 0, cigpday = 0;
 RUN; QUIT;
 
-/*Malheureusement, PROC REG n'offre pas de possibilités pour 
-estimer des combinaisons de paramètres... On pourrait utiliser
+/*Malheureusement, PROC REG n'offre pas de possibilitÃ©s pour 
+estimer des combinaisons de paramÃ¨tres... On pourrait utiliser
 PROC MIXED qui permet un estimateur robuste 
 par le maximum de vraisemblance*/
 
@@ -244,10 +244,10 @@ PROC REG DATA = fram1b;
 	OUTPUT OUT = sortie STUDENT = student P = predit;
 RUN; QUIT;
 
-/*Après une modification au modèle, il faudrait revérifier les hypothèses pour ce nouveau modèle.
-Les hypothèses semblent beaucoup mieux respectées (non présenté).
-Pour IMC, on semble voir une légère tendance quadratique, mais qui pourrait
-possiblement être attribuable à des valeurs extrêmes d'IMC. */
+/*AprÃ¨s une modification au modÃ¨le, il faudrait revÃ©rifier les hypothÃ¨ses pour ce nouveau modÃ¨le.
+Les hypothÃ¨ses semblent beaucoup mieux respectÃ©es (non prÃ©sentÃ©).
+Pour IMC, on semble voir une lÃ©gÃ¨re tendance quadratique, mais qui pourrait
+possiblement Ãªtre attribuable Ã  des valeurs extrÃªmes d'IMC. */
 
 PROC GLM DATA = fram1b;
 	MODEL log_SYSBP = cursmoke cigpday sex age bmi diabetes / CLPARM SOLUTION SS3;
@@ -258,14 +258,14 @@ RUN;
 
 
 
-/*Conclusion: On ne peut pas rejetter l'hypothèse qu'il n'y a pas
-de lien entre le tabagisme et la pression artérielle systolique. 
+/*Conclusion: On ne peut pas rejetter l'hypothÃ¨se qu'il n'y a pas
+de lien entre le tabagisme et la pression artÃ©rielle systolique. 
 Ceci ne veut pas dire qu'on conclut qu'il n'y a pas d'effet du tabagisme
-sur la pression systolique. Les ICs obtenus démontrent une compatibilité 
-des données à la fois avec un effet positif, une absence d'effet et un
-effet négatif. Les données sont donc peu informatives. Par ailleurs,
-il est fort probable qu'il reste un biais de confusion résiduel dû à des
-variables non utilisées, telle que le niveau d'éducation ou le statut socio-économique.*/
+sur la pression systolique. Les ICs obtenus dÃ©montrent une compatibilitÃ© 
+des donnÃ©es Ã  la fois avec un effet positif, une absence d'effet et un
+effet nÃ©gatif. Les donnÃ©es sont donc peu informatives. Par ailleurs,
+il est fort probable qu'il reste un biais de confusion rÃ©siduel dÃ» Ã  des
+variables non utilisÃ©es, telle que le niveau d'Ã©ducation ou le statut socio-Ã©conomique.*/
 
 
 
