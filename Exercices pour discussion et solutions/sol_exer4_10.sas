@@ -1,4 +1,4 @@
-libname modeli " C:\Users\etudiant\Documents\EPM-8006\donnees";
+libname modeli "/workspaces/workspace/DonnÃ©es EPM-8006";
 
 data exe11_02; set modeli.chp11;
 
@@ -18,7 +18,7 @@ proc logistic;
  model y=fume pdsm taille ag;
 run;
 
-/* En ajustant pour tous les facteurs (AGE, TAILLE et PDSM), le rapport de cotes est de 2,92 avec un intervalle de confiance à 95% de [2,18   -  3,89]. Sans ajustement, le rapport de cotes est de 2,99 avec un intervalle de confiance à 95% de [2,25   -  3,96]. 
-Si on admet que les naissances dans les deux tranches de poids les plus bas sont rares, alors tout changement du RC serait dû aux facteurs de confusion. On voit ici que l'âge, la taille et le poids de la mère ne confondent pas le RC.
+/* En ajustant pour tous les facteurs (AGE, TAILLE et PDSM), le rapport de cotes est de 2,92 avec un intervalle de confiance Ã  95% de [2,18   -  3,89]. Sans ajustement, le rapport de cotes est de 2,99 avec un intervalle de confiance Ã  95% de [2,25   -  3,96]. 
+Si on admet que les naissances dans les deux tranches de poids les plus bas sont rares, alors tout changement du RC serait dÃ» aux facteurs de confusion. On voit ici que l'Ã¢ge, la taille et le poids de la mÃ¨re ne confondent pas le RC.
 
-À partir de ce modèle, on conclut que « pour tout seuil choisi de poids à la naissance sur cette échelle ordinale,  la cote des risques d’avoir un bébé d’un poids inférieur à ce seuil est 3 fois plus grande chez les mères fumeuses que chez les mères non fumeuses ».*/
+Ã€ partir de ce modÃ¨le, on conclut que Â« pour tout seuil choisi de poids Ã  la naissance sur cette Ã©chelle ordinale,  la cote des risques dâ€™avoir un bÃ©bÃ© dâ€™un poids infÃ©rieur Ã  ce seuil est 3 fois plus grande chez les mÃ¨res fumeuses que chez les mÃ¨res non fumeuses Â».*/
