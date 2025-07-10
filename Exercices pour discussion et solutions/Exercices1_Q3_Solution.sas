@@ -1,21 +1,21 @@
-/*Importation des données*/
-PROC IMPORT DATAFILE = "C:\Users\detal9\Dropbox\Travail\Cours\EPM8006\Automne 2015\Données\lalonde.csv"
+/*Importation des donnÃ©es*/
+PROC IMPORT DATAFILE = "/workspaces/workspace/DonnÃ©es EPM-8006/lalonde.csv"
 	OUT = lalonde
 	REPLACE
 	DBMS = CSV;
 RUN;
 
-/*Vérifier que l'importation s'est bien déroulée*/
+/*VÃ©rifier que l'importation s'est bien dÃ©roulÃ©e*/
 PROC CONTENTS DATA = lalonde VARNUM; RUN;
 
 /*Je calcule des statistiques descriptives selon
-l'exposition. Je constate des valeurs extrêmes pour le revenu.*/
+l'exposition. Je constate des valeurs extrÃªmes pour le revenu.*/
 PROC MEANS DATA = lalonde MEAN STD SUM MIN Q1 MEDIAN Q3 MAX;
 	CLASS treat;
 	VAR age educ black hispan married nodegree re74 re75 re78;
 RUN;
 
-/*J'ajoute un identifiant et je crée une variable
+/*J'ajoute un identifiant et je crÃ©e une variable
 d'interaction pour PROC REG*/
 DATA lalonde2;
 	SET lalonde;
@@ -23,14 +23,14 @@ DATA lalonde2;
 	ID + 1;
 RUN;
 
-/*J'ajuste le modèle de régression linéaire et je vérifie les hypothèses*/
+/*J'ajuste le modÃ¨le de rÃ©gression linÃ©aire et je vÃ©rifie les hypothÃ¨ses*/
 PROC REG DATA = lalonde2 PLOTS = NONE;
 	MODEL re78 = treat treatXre74 age educ black hispan married nodegree re74 re75 / VIF;
 	OUTPUT OUT = sortie P = predit STUDENT = student;
 RUN; QUIT;
 
 
-/*1. Linéarité*/
+/*1. LinÃ©aritÃ©*/
 PROC SGPLOT DATA = sortie;
 	SCATTER X = age Y = student;
 	LOESS X = age Y = student;
@@ -47,8 +47,8 @@ PROC SGPLOT DATA = sortie;
 	SCATTER X = re74 Y = student;
 	LOESS X = re74 Y = student;
 	REFLINE 0;
-RUN; /*Il semble y avoir une tendance résiduelle, mais 
-probablement en raison d'une valeur extrême.*/
+RUN; /*Il semble y avoir une tendance rÃ©siduelle, mais 
+probablement en raison d'une valeur extrÃªme.*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = re75 Y = student;
@@ -56,9 +56,9 @@ PROC SGPLOT DATA = sortie;
 	REFLINE 0;
 RUN;
 
-/*2. Indépendance - ok selon nos connaissances*/
+/*2. IndÃ©pendance - ok selon nos connaissances*/
 
-/*3. Homoscédasticité*/
+/*3. HomoscÃ©dasticitÃ©*/
 PROC SGPLOT DATA = sortie;
 	SCATTER X = black Y = student;
 	LOESS X = black Y = student;
@@ -93,18 +93,18 @@ PROC SGPLOT DATA = sortie;
 	SCATTER X = predit Y = student;
 	LOESS X = predit Y = student;
 	REFLINE 0;
-RUN; /*On peut clairement voir une valeur extrême!*/
+RUN; /*On peut clairement voir une valeur extrÃªme!*/
 
-/*4. Normalité: pas important avec notre n*/
+/*4. NormalitÃ©: pas important avec notre n*/
 
 PROC UNIVARIATE DATA = sortie;
 	VAR student;
 	QQPLOT student / NORMAL(MU = 0 SIGMA = 1);
 RUN;
 
-/*5. Multicollinéarité : ok*/
+/*5. MulticollinÃ©aritÃ© : ok*/
 
-/*6. Données influentes*/
+/*6. DonnÃ©es influentes*/
 
 PROC REG DATA = lalonde2 PLOTS = NONE;
 	MODEL re78 = treat age treatXre74 educ black hispan married nodegree re74 re75 / VIF INFLUENCE;
@@ -113,7 +113,7 @@ PROC REG DATA = lalonde2 PLOTS = NONE;
 	ID ID treat age educ black hispan married nodegree re74 re75;
 RUN;
 
-/*Je vérifie par rapport aux deux paramètres associés au traitement*/
+/*Je vÃ©rifie par rapport aux deux paramÃ¨tres associÃ©s au traitement*/
 DATA OutputStatistics;
 	SET OutputStatistics;
 	abs_DFB_treat = abs(DFB_treat);
@@ -125,9 +125,9 @@ PROC PRINT DATA = OutputStatistics (OBS = 20); RUN;
 
 PROC SORT DATA = OutputStatistics; BY DESCENDING abs_DFB_treatXre74; RUN;
 PROC PRINT DATA = OutputStatistics (OBS = 20); RUN;
-/*Il y a une observation très influente.
-Les problèmes que j'ai constatés pourraient possiblement être tous dus à cette
-observation influente. Je décide de la retirer. */
+/*Il y a une observation trÃ¨s influente.
+Les problÃ¨mes que j'ai constatÃ©s pourraient possiblement Ãªtre tous dus Ã  cette
+observation influente. Je dÃ©cide de la retirer. */
 
 
 
@@ -143,9 +143,9 @@ PROC REG DATA = lalonde3 PLOTS = NONE;
 	MODEL re78 = treat age treatXre74 educ black hispan married nodegree re74 re75 / VIF;
 	OUTPUT OUT = sortie P = predit STUDENT = student;
 RUN;
-/*Je dois revérifier toutes les hypothèses...*/
+/*Je dois revÃ©rifier toutes les hypothÃ¨ses...*/
 
-/*1. Linéarité*/
+/*1. LinÃ©aritÃ©*/
 PROC SGPLOT DATA = sortie;
 	SCATTER X = age Y = student;
 	LOESS X = age Y = student;
@@ -162,8 +162,8 @@ PROC SGPLOT DATA = sortie;
 	SCATTER X = re74 Y = student;
 	LOESS X = re74 Y = student;
 	REFLINE 0;
-RUN; /*Il semble y avoir une tendance résiduelle, mais 
-probablement en raison d'une valeur extrême.*/
+RUN; /*Il semble y avoir une tendance rÃ©siduelle, mais 
+probablement en raison d'une valeur extrÃªme.*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = re75 Y = student;
@@ -171,9 +171,9 @@ PROC SGPLOT DATA = sortie;
 	REFLINE 0;
 RUN;
 
-/*2. Indépendance - ok selon nos connaissances*/
+/*2. IndÃ©pendance - ok selon nos connaissances*/
 
-/*3. Homoscédasticité*/
+/*3. HomoscÃ©dasticitÃ©*/
 PROC SGPLOT DATA = sortie;
 	SCATTER X = black Y = student;
 	LOESS X = black Y = student;
@@ -208,18 +208,18 @@ PROC SGPLOT DATA = sortie;
 	SCATTER X = predit Y = student;
 	LOESS X = predit Y = student;
 	REFLINE 0;
-RUN; /*On peut clairement voir une valeur extrême!*/
+RUN; /*On peut clairement voir une valeur extrÃªme!*/
 
-/*4. Normalité: pas important avec notre n*/
+/*4. NormalitÃ©: pas important avec notre n*/
 
 PROC UNIVARIATE DATA = sortie;
 	VAR student;
 	QQPLOT student / NORMAL(MU = 0 SIGMA = 1);
 RUN;
 
-/*5. Multicollinéarité : ok*/
+/*5. MulticollinÃ©aritÃ© : ok*/
 
-/*6. Données influentes*/
+/*6. DonnÃ©es influentes*/
 
 PROC REG DATA = lalonde3 PLOTS = NONE;
 	MODEL re78 = treat age treatXre74 educ black hispan married nodegree re74 re75 / VIF INFLUENCE;
@@ -240,8 +240,8 @@ PROC PRINT DATA = OutputStatistics (OBS = 20); RUN;
 PROC SORT DATA = OutputStatistics; BY DESCENDING abs_DFB_treatXre74; RUN;
 PROC PRINT DATA = OutputStatistics (OBS = 20); RUN;
 
-/*J'utilise l'énoncé contrast pour tester l'hypothèse d'absence d'effet du traitement
-et les énoncés estimate pour estimer l'effet du traitement pour différentes tranches de revenu en 74.*/
+/*J'utilise l'Ã©noncÃ© contrast pour tester l'hypothÃ¨se d'absence d'effet du traitement
+et les Ã©noncÃ©s estimate pour estimer l'effet du traitement pour diffÃ©rentes tranches de revenu en 74.*/
 PROC GLM DATA = lalonde3 PLOTS = NONE;
 	MODEL re78 = treat|re74 age educ black hispan married nodegree re74 re75 / SOLUTION CLPARM SS3;
 	CONTRAST "Effet traitement" treat 1, treat*re74 1;
@@ -249,16 +249,16 @@ PROC GLM DATA = lalonde3 PLOTS = NONE;
 	ESTIMATE "Effet traitement pour revenu 2000" treat 1 treat*re74 2000;
 	ESTIMATE "Effet traitement pour revenu 5000" treat 1 treat*re74 5000;
 RUN; QUIT;
-/*Le traitement semble très efficace pour les gens sans revenu (différence de revenu
-en 78 = 2831$, IC à 95%: 1226$ à 4437$). Pour ceux ayant un revenu de 2000$, le programme
-semble également avoir été efficace, bien que les données sont compatibles avec un effet
-négligeable du programme (différence = 1537$, IC à 95%: 34$ à 3040$). Pour les gens ayant un
-revenu de 5000$, les données ne permettent pas de conclure concernant l'efficacité du programme,
-puisqu'elles sont à la fois compatible avec un effet positif, négatif et nul du programme
-(différence =  -404$, IC à 95%: -2073$ à 1265$).
+/*Le traitement semble trÃ¨s efficace pour les gens sans revenu (diffÃ©rence de revenu
+en 78 = 2831$, IC Ã  95%: 1226$ Ã  4437$). Pour ceux ayant un revenu de 2000$, le programme
+semble Ã©galement avoir Ã©tÃ© efficace, bien que les donnÃ©es sont compatibles avec un effet
+nÃ©gligeable du programme (diffÃ©rence = 1537$, IC Ã  95%: 34$ Ã  3040$). Pour les gens ayant un
+revenu de 5000$, les donnÃ©es ne permettent pas de conclure concernant l'efficacitÃ© du programme,
+puisqu'elles sont Ã  la fois compatible avec un effet positif, nÃ©gatif et nul du programme
+(diffÃ©rence =  -404$, IC Ã  95%: -2073$ Ã  1265$).
 
-/*Puisqu'il semble rester une observation assez influente, mais beaucoup moins que la première.
-Je la retire pour comparer mes résultats.*/
+/*Puisqu'il semble rester une observation assez influente, mais beaucoup moins que la premiÃ¨re.
+Je la retire pour comparer mes rÃ©sultats.*/
 
 
 DATA lalonde4;
@@ -272,7 +272,7 @@ PROC REG DATA = lalonde3 PLOTS = NONE;
 	OUTPUT OUT = sortie P = predit STUDENT = student;
 RUN;
 
-/*1. Linéarité*/
+/*1. LinÃ©aritÃ©*/
 PROC SGPLOT DATA = sortie;
 	SCATTER X = age Y = student;
 	LOESS X = age Y = student;
@@ -289,8 +289,8 @@ PROC SGPLOT DATA = sortie;
 	SCATTER X = re74 Y = student;
 	LOESS X = re74 Y = student;
 	REFLINE 0;
-RUN; /*Il semble y avoir une tendance résiduelle, mais 
-probablement en raison d'une valeur extrême.*/
+RUN; /*Il semble y avoir une tendance rÃ©siduelle, mais 
+probablement en raison d'une valeur extrÃªme.*/
 
 PROC SGPLOT DATA = sortie;
 	SCATTER X = re75 Y = student;
@@ -298,9 +298,9 @@ PROC SGPLOT DATA = sortie;
 	REFLINE 0;
 RUN;
 
-/*2. Indépendance - ok selon nos connaissances*/
+/*2. IndÃ©pendance - ok selon nos connaissances*/
 
-/*3. Homoscédasticité*/
+/*3. HomoscÃ©dasticitÃ©*/
 PROC SGPLOT DATA = sortie;
 	SCATTER X = black Y = student;
 	LOESS X = black Y = student;
@@ -335,18 +335,18 @@ PROC SGPLOT DATA = sortie;
 	SCATTER X = predit Y = student;
 	LOESS X = predit Y = student;
 	REFLINE 0;
-RUN; /*On peut clairement voir une valeur extrême!*/
+RUN; /*On peut clairement voir une valeur extrÃªme!*/
 
-/*4. Normalité: pas important avec notre n*/
+/*4. NormalitÃ©: pas important avec notre n*/
 
 PROC UNIVARIATE DATA = sortie;
 	VAR student;
 	QQPLOT student / NORMAL(MU = 0 SIGMA = 1);
 RUN;
 
-/*5. Multicollinéarité : ok*/
+/*5. MulticollinÃ©aritÃ© : ok*/
 
-/*6. Données influentes*/
+/*6. DonnÃ©es influentes*/
 
 PROC REG DATA = lalonde4 PLOTS = NONE;
 	MODEL re78 = treat age treatXre74 educ black hispan married nodegree re74 re75 / VIF INFLUENCE;
@@ -367,7 +367,7 @@ PROC PRINT DATA = OutputStatistics (OBS = 20); RUN;
 PROC SORT DATA = OutputStatistics; BY DESCENDING abs_DFB_treatXre74; RUN;
 PROC PRINT DATA = OutputStatistics (OBS = 20); RUN;
 
-/*Il reste trois observations se démarquant, mais beaucoup moins qu'avant*/
+/*Il reste trois observations se dÃ©marquant, mais beaucoup moins qu'avant*/
 
 PROC GLM DATA = lalonde4 PLOTS = NONE;
 	MODEL re78 = treat|re74 age educ black hispan married nodegree re74 re75 / SOLUTION CLPARM SS3;
@@ -376,8 +376,8 @@ PROC GLM DATA = lalonde4 PLOTS = NONE;
 	ESTIMATE "Effet traitement pour revenu 2000" treat 1 treat*re74 2000;
 	ESTIMATE "Effet traitement pour revenu 5000" treat 1 treat*re74 5000;
 RUN; QUIT;
-/*Les conclusions sont qualitativement restés similaires par rapport aux
-précédents. Je décide donc de ne pas retirer de nouvelles observations.
-Je présenterais les résultats en ne retirant qu'une observation en mentionnant
-qu'une analyse en retirant une deuxième observation possiblement influente a été
-menée et que les résultats obtenus étaient similaires.*/
+/*Les conclusions sont qualitativement restÃ©s similaires par rapport aux
+prÃ©cÃ©dents. Je dÃ©cide donc de ne pas retirer de nouvelles observations.
+Je prÃ©senterais les rÃ©sultats en ne retirant qu'une observation en mentionnant
+qu'une analyse en retirant une deuxiÃ¨me observation possiblement influente a Ã©tÃ©
+menÃ©e et que les rÃ©sultats obtenus Ã©taient similaires.*/
