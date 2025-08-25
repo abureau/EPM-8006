@@ -10,6 +10,8 @@ IF PDS>2500 THEN Y=3;
 
 proc logistic;
 model y=fume prem/link = glogit aggregate scale=none;
+/* On peut seulement obtenir des valeurs prédites, pas de résidus */
+    OUTPUT OUT = sortie P = predit; 
 run;
 
 /* Calcul de score de propension pour la scolarité

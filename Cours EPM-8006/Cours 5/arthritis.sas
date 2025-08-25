@@ -18,8 +18,10 @@ proc genmod des;
 run;
 
 * Analyse avec la procédure logistic;
-proc logistic des;
+proc logistic des data=arthritis;
      model y4 = age trt;
+/* On peut seulement obtenir des valeurs prédites, pas de résidus */
+OUTPUT OUT = sortie_ordinal P = predit;
 run;
 
 proc logistic;
