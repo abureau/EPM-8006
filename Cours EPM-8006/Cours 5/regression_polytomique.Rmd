@@ -69,16 +69,17 @@ model2 = multinom(comptes ~ FUME + PREM,family=binomial)
 summary(model2)
 ```
 
+On produit maintenant les graphiques des résidus pour chaque fonction logistique. Attention! Les colonnes correspondent aux indices du facteur *Y*, pas aux valeurs de *Y*.
 ```{r}
-plot(fitted(model2)[,1],resid(model2)[,1],main="Y = 1",ylim=c(-0.1,0.1))
+plot(fitted(model2)[,1],resid(model2)[,1],main=paste0("Y = ",levels(chp05$Y)[1]),ylim=c(-0.1,0.1))
 abline(h=0)
 ```
 ```{r}
-plot(fitted(model2)[,2],resid(model2)[,2],main="Y = 2",ylim=c(-0.1,0.1))
+plot(fitted(model2)[,2],resid(model2)[,2],main=paste0("Y = ",levels(chp05$Y)[2]),ylim=c(-0.1,0.1))
 abline(h=0)
 ```
 ```{r}
-plot(fitted(model2)[,3],resid(model2)[,3],main="Y = 3",ylim=c(-0.1,0.1))
+plot(fitted(model2)[,3],resid(model2)[,3],main=paste0("Y = ",levels(chp05$Y)[3]),ylim=c(-0.1,0.1))
 abline(h=0)
 ```
 # Calcul de score de propension pour la scolarité
