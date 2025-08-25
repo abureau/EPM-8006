@@ -1,6 +1,8 @@
 ---
 title: "Régression polytomique"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Importation des données
@@ -10,8 +12,13 @@ chp05 = read.table("chp05.txt",header=TRUE)
 ```
 
 ## Définition de la variable réponse trichotomique
+On fait de *Y* un facteur en spécifiant le niveau 3 en premier pour qu'il soit traité comme le niveau de référence par *multinom*.
+
+On en profite pour dichotomiser la variable PREM
 ```{r}
 chp05$Y = unclass(cut(chp05$PDS,breaks=c(0,2000,2500,5000)))
+chp05$Y = factor(chp05$Y,levels=c(3,1,2))
+chp05$PREM[chp05$PREM>1] = 1
 table(chp05$Y)
 ```
 # Estimation du modèle polytomique
@@ -26,7 +33,7 @@ summary(fit)
 
 ## Avec la fonction multinom
 ```{r}
-library(MASS)
+library(nnet)
 model1 <- multinom(Y ~ FUME + PREM,data=chp05)
 summary(model1)
 ```
@@ -35,7 +42,45 @@ Affichage des rapports de cote avec intervalles de confiance de Wald et tests d'
 library(epiDisplay)
 mlogit.display(model1)
 ```
+## Examen des résidus
 
+On commence par créer un tableau des effectifs de chaque modalité pour les 3 niveaux de Y 
+```{r}
+chp05_compte = as.data.frame(xtabs(~Y + FUME + PREM,data=chp05))
+
+chp05.1 = chp05_compte[chp05_compte$Y==1,-1]
+chp05.2 = chp05_compte[chp05_compte$Y==2,-1]
+names(chp05.2)[ncol(chp05.2)] = "Freq2"
+chp05.3 = chp05_compte[chp05_compte$Y==3,-1]
+names(chp05.3)[ncol(chp05.3)] = "Freq3"
+```
+On réunit les 3 tableaux de façon à avoir les effectifs des sujets dans chaque niveau de réponse sur la même ligne pour chaque modalité 
+```{r}
+chp05.final = merge(chp05.3,chp05.1)
+chp05.final = merge(chp05.final,chp05.2)
+```
+
+On peut maintenant effectuer la régression en spécifiant les effectifs de chaque niveau dans une matrice.
+```{r}
+attach(chp05.final)
+# Ceci extrait les colonnes d'effectifs qui contiennent "Freq"
+comptes = as.matrix(chp05.final[,grep("Freq",names(chp05.final))])
+model2 = multinom(comptes ~ FUME + PREM,family=binomial)
+summary(model2)
+```
+
+```{r}
+plot(fitted(model2)[,1],resid(model2)[,1],main="Y = 1",ylim=c(-0.1,0.1))
+abline(h=0)
+```
+```{r}
+plot(fitted(model2)[,2],resid(model2)[,2],main="Y = 2",ylim=c(-0.1,0.1))
+abline(h=0)
+```
+```{r}
+plot(fitted(model2)[,3],resid(model2)[,3],main="Y = 3",ylim=c(-0.1,0.1))
+abline(h=0)
+```
 # Calcul de score de propension pour la scolarité
 
 ## Définition de la variable réponse dichotomique
