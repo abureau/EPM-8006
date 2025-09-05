@@ -1,0 +1,89 @@
+---
+title: "Introduction à R"
+output: html_notebook
+---
+#Exemple d'importation des données
+
+```{r}
+fram1 = read.csv("/workspaces/workspace/EPM-8006/Laboratoires EPM-8006/Laboratoire 1/fram1.csv")
+```
+Alternative pour ouvrir une fenêtre pour choisir le fichier:
+```{r}
+#fram1 = read.csv(file.choose())
+```
+#Vérifier que l'importation s'est bien déroulée
+```{r}
+str(fram1) 
+head(fram1,n=10)
+class(fram1)
+```
+#Quelques statistiques descriptives
+Plusieurs fonctions de R s'appliquent à toutes les variables. Il est utile de retirer la variable RANDID pour les statistiques descriptives
+```{r}
+
+fram1_sansID = fram1[,-1]
+#fram1_sansID = fram1[,-c("RANDID")]
+#ram1_sansID = fram1[,c()]  #pour garder que les variables listées
+```
+La fonction *summary* fournit la plupart des statistiques voulues.
+```{r}
+summary(fram1_sansID)
+```
+Pour avoir aussi l'écart-type, on peut utiliser *favstats* du module *mosaic*. Si le module *mosaic* n'est pas installé sur votre ordinateur, c'est l'occasion d'apprendre à le faire avec l'installateur de "packages" dans un menu de R ou RStudio.
+
+Comme la fonction *favstats* opère sur une seule variable, il faut utiliser la fonction *apply* pour l'appliquer à toutes les colonnes d'un jeu de données.
+```{r}
+#install.packages("mosaic")   #installer le package
+library(mosaic)
+apply(fram1_sansID,2,favstats)
+```
+La fonction R de base pour les tableaux est *table*. Pour calculer des proportions, il faut sauvegarder la sortie de *table* dans un object et y appliquer *prop.table*. On fait l'exemple avec le sexe. Notez que contrairement à SAS, R est sensible aux majuscules et minuscules, donc SEX n'est pas la même variable que sex ou Sex.
+```{r}
+tab=table(fram1_sansID$SEX)
+tab
+prop.table(tab)
+```
+On remarque des valeurs douteuses pour la SBP. Afficher la ou les lignes avec des valeurs très élevées de SBP:
+```{r}
+fram1[fram1$SYSBP>290,]
+```
+
+Supprimer l'observation avec une valeur extrême:
+```{r}
+fram1b = fram1[fram1$RANDID!=1080920,]
+#fram1b=fram1[fram1$SYSBP<290,]     #Une autre manière de faire
+```
+Effectuer des statistiques descriptives séparément chez les hommes et chez les femmes se fait avec la fonction *tapply* pour une variable à la fois. Voici un exemple pour la tension systolique:
+```{r}
+with(fram1b,tapply(SYSBP,SEX,summary))
+with(fram1b,tapply(SYSBP,SEX,favstats))
+```
+
+# Création de variables
+Créer une variable pour hypertension SBP > 140 ou DBP > 90:
+
+```{r}
+fram1b$hypertension = fram1b$SYSBP > 140 | fram1b$DIABP > 90
+
+#Exercice: 
+with(fram1b, table(hypertension))
+unique(fram1b$hypertension)
+```
+
+Regarder des statistiques descriptives seulement chez les personnes souffrant
+d'hypertension:
+```{r}
+fram1b_ht = fram1b[fram1b$hypertension==1,-1]
+apply(fram1b_ht,2,favstats)
+```
+#Sauvegarder son travail
+
+Quand vous quittez RStudio ou l'interface de base de R, il va vous demander si vous voulez sauvegarder votre espace de travail. Si vous le faite, R enregistrera tous les objets de votre session de travail dans un fichier caché appelé *.RData*. Vous pouvez aussi sauvegarder un ou plusieurs objets dans un fichier auquel vous devez donner l'extension *.RData* si vous voulez que R le reconnaisse par la suite:
+```{r}
+save(fram1b,file = "/workspaces/workspace/EPM-8006/Laboratoires EPM-8006/Laboratoire 1/fram1b.RData")
+```
+Pour charger le ou les objets de ce fichier dans une autre session:
+```{r}
+load("/workspaces/workspace/EPM-8006/Laboratoires EPM-8006/Laboratoire 1/fram1b.RData")
+```
+
