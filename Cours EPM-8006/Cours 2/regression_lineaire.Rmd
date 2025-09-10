@@ -78,8 +78,8 @@ vif(reglin)
 Différence dans la valeur du beta de l'IMC due à la suppression d'une observation
 ```{r}
 dfb = dfbetas(reglin);
-dfb[,4][abs(dfb[,4]) > 0.2]
-fram1$RANDID[abs(dfb[,4]) > 0.2]
+dfb[,"BMI"][abs(dfb[,"BMI"]) > 0.2]
+fram1$RANDID[abs(dfb[,"BMI"]) > 0.2]
 ```
 
 Distance de Cook
