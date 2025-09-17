@@ -1,14 +1,14 @@
 /* Illustration de graphiques diagnostiques */
-libname modeli " C:\Users\etudiant\Documents\EPM-8006\donnees";
+libname modeli "/workspaces/workspace/DonnÃ©es EPM-8006/donnees";
 
 DATA POL; SET modeli.CHP05;
 
-/* Définition de la variable réponse de faible poids de naissance (< 2500g) */
+/* Dï¿½finition de la variable rï¿½ponse de faible poids de naissance (< 2500g) */
 IF PDS<=2500      THEN Y=1;     ELSE Y=2;
 
-/* recodage de la variable de prématurité en 2 catégories oui/non */
+/* recodage de la variable de prï¿½maturitï¿½ en 2 catï¿½gories oui/non */
 IF PREM IN(1,2,3) THEN PREM=1;  ELSE PREM=0;
-/* recodage du poids de la mère en une variable codant des intervalles de 10 kg de 1 à 5 */
+/* recodage du poids de la mï¿½re en une variable codant des intervalles de 10 kg de 1 ï¿½ 5 */
 if      pdsm<45 then pdm=1;
 if  45<=pdsm<55 then pdm=2;
 if  55<=pdsm<65 then pdm=3;
@@ -16,18 +16,18 @@ if  65<=pdsm<75 then pdm=4;
 if     pdsm>=75 then pdm=5;
 run;
 
-/* Modèle du faible poids de naissance en fonction du poids de la mère, de l'antécédant
-   de prématurité aux grossesses antérieures et de l'hypertension chez la mère pendant la grossesse. */
+/* Modï¿½le du faible poids de naissance en fonction du poids de la mï¿½re, de l'antï¿½cï¿½dant
+   de prï¿½maturitï¿½ aux grossesses antï¿½rieures et de l'hypertension chez la mï¿½re pendant la grossesse. */
 
-/* Analyse des sujets individuellement. Approche qui donne un résidu par sujet.
+/* Analyse des sujets individuellement. Approche qui donne un rï¿½sidu par sujet.
  
 Comme la variable PDSM est quantitative et a beaucoup de valeurs distinctes, il y a
-presqu'autant de modalités que d'observations, et on ne peut pas faire mieux.*/
+presqu'autant de modalitï¿½s que d'observations, et on ne peut pas faire mieux.*/
 
 ods html;
 ods graphics on;
 
-/* Estimation du modèle */
+/* Estimation du modï¿½le */
 
 PROC LOGISTIC data=pol;
  MODEL Y= PDSM PREM HT / aggregate=(PDSM PREM HT) scale=none influence iplots;
@@ -44,7 +44,7 @@ proc sgplot data=pred;
 	REFLINE 0;
 RUN;
 
-/* Résidu de Pearson en fonction de la diagonale de la matrice de projection (levier)
+/* Rï¿½sidu de Pearson en fonction de la diagonale de la matrice de projection (levier)
    comme dans R */
 proc gplot data=pred;
   plot rchi*hm=Y;
@@ -70,19 +70,19 @@ proc gplot data=pred;
   plot dc*xb=Y;
 run;
 
-/* Vérification de la multicollinéarité */
+/* Vï¿½rification de la multicollinï¿½aritï¿½ */
 
 PROC reg data=pol;
  MODEL Y= PDSM PREM HT / vif;
 RUN;
 
-/* Stratifier le poids de la mère 
+/* Stratifier le poids de la mï¿½re 
 
-Remplaçons pdsm par une variable codant des intervalles de 10 kg de 1 à 5,
-   en passant du format avec une ligne par sujet au format événements/observations avec
-   une ligne par modalité */
+Remplaï¿½ons pdsm par une variable codant des intervalles de 10 kg de 1 ï¿½ 5,
+   en passant du format avec une ligne par sujet au format ï¿½vï¿½nements/observations avec
+   une ligne par modalitï¿½ */
 
-/* On commence par créer un tableau des effectifs de chaque modalité pour les cas
+/* On commence par crï¿½er un tableau des effectifs de chaque modalitï¿½ pour les cas
    et les non-cas */
 proc freq data=pol;
   tables pdm*prem*ht*y / out=tableau;
@@ -99,8 +99,8 @@ data compte_noncas;
   rename count=n_noncas;
 run;
 
-/* Enfin, on réunit les deux tableaux de façon à avoir les effectifs des cas
-   et des non-cas sur la même ligne pour chaque modalité */
+/* Enfin, on rï¿½unit les deux tableaux de faï¿½on ï¿½ avoir les effectifs des cas
+   et des non-cas sur la mï¿½me ligne pour chaque modalitï¿½ */
 data chp5_compte_final;
   merge compte_cas compte_noncas;
   by pdm prem ht;
@@ -130,21 +130,21 @@ proc gplot data=pred;
   plot dc*prob;
 run;
 
-/* Inspection des résidus de l'âge */
+/* Inspection des rï¿½sidus de l'ï¿½ge */
 
-/* Cas où la relation entre le logit du risque et l'âge est linéaire */
+/* Cas oï¿½ la relation entre le logit du risque et l'ï¿½ge est linï¿½aire */
 
-/* Conversion du format avec une ligne par sujet au format événements/observations avec
-   une ligne par modalité */
+/* Conversion du format avec une ligne par sujet au format ï¿½vï¿½nements/observations avec
+   une ligne par modalitï¿½ */
 
-/* On commence par créer un tableau des effectifs de chaque modalité pour les cas
+/* On commence par crï¿½er un tableau des effectifs de chaque modalitï¿½ pour les cas
    et les non-cas */
 proc freq data=modeli.chp04;
   tables age*prem / out=tableau;
 run;
 
-/* On sépare ensuite les lignes pour les cas des lignes pour les non-cas
-   dans deux tableaux de données distincts */
+/* On sï¿½pare ensuite les lignes pour les cas des lignes pour les non-cas
+   dans deux tableaux de donnï¿½es distincts */
 data compte_cas;
   set tableau;
   where prem=1;
@@ -157,8 +157,8 @@ data compte_noncas;
   rename count=n_noncas;
 run;
 
-/* Enfin, on réunit les deux tableaux de façon à avoir les effectifs des cas
-   et des non-cas sur la même ligne pour chaque modalité */
+/* Enfin, on rï¿½unit les deux tableaux de faï¿½on ï¿½ avoir les effectifs des cas
+   et des non-cas sur la mï¿½me ligne pour chaque modalitï¿½ */
 data chp4groupeage;
   merge compte_cas compte_noncas;
   by age;
@@ -167,7 +167,7 @@ data chp4groupeage;
   n_total = n_cas+n_noncas;
 run;
 
-/* Estimation du modèle */
+/* Estimation du modï¿½le */
 
 proc logistic data=chp4groupeage;
 model n_cas/n_total = age / aggregate=(age) scale=none;
@@ -188,8 +188,8 @@ proc gplot data=pred;
   plot dfbeta_age*age;
 run;
 
-* Approche alternative pour les résidus de Pearson;
-* Commencer par faire l'analyse de la base de données;
+* Approche alternative pour les rï¿½sidus de Pearson;
+* Commencer par faire l'analyse de la base de donnï¿½es;
 proc logistic data=modeli.chp04;
 MODEL prem = AGE;
  OUTPUT OUT=PRED2 pred=prob reschi=rchi;
@@ -198,14 +198,14 @@ RUN;
 proc sort data=pred2;
 by age;
 
-* Calcul de la somme des résidus de toutes les observations au même âge;
+* Calcul de la somme des rï¿½sidus de toutes les observations au mï¿½me ï¿½ge;
 proc means data=pred2;
 by age;
 var rchi;
 output out=predniveau sum=rchisomme;
 run;
 
-* Division par la racine carrée du nombre d'observations au même âge;
+* Division par la racine carrï¿½e du nombre d'observations au mï¿½me ï¿½ge;
 data predniveau;
   set predniveau;
   rchi = rchisomme/sqrt(_freq_);
@@ -214,7 +214,7 @@ proc gplot data=predniveau;
   plot rchi*age;
 run;
 
-/* Régression log-binomiale */
+/* Rï¿½gression log-binomiale */
 proc genmod data=chp4groupeage;
 model n_cas/n_total = age / dist=bin link=log aggregate=(age) noscale;
  OUTPUT OUT=PRED pred=prob reschi=rchi resdev=rdev dfbeta=_all_ cooksd=dc;
@@ -232,19 +232,19 @@ proc gplot data=pred;
   plot dfbeta2*age;
 run;
 
-/* Cas où la relation entre le logit du risque et l'âge n'est pas linéaire */
+/* Cas oï¿½ la relation entre le logit du risque et l'ï¿½ge n'est pas linï¿½aire */
 
-/* Conversion du format avec une ligne par sujet au format événements/observations avec
-   une ligne par modalité */
+/* Conversion du format avec une ligne par sujet au format ï¿½vï¿½nements/observations avec
+   une ligne par modalitï¿½ */
 
-/* On commence par créer un tableau des effectifs de chaque modalité pour les cas
+/* On commence par crï¿½er un tableau des effectifs de chaque modalitï¿½ pour les cas
    et les non-cas */
 proc freq data=pol;
   tables age*y / out=tableau;
 run;
 
-/* On sépare ensuite les lignes pour les cas des lignes pour les non-cas
-   dans deux tableaux de données distincts */
+/* On sï¿½pare ensuite les lignes pour les cas des lignes pour les non-cas
+   dans deux tableaux de donnï¿½es distincts */
 data compte_cas;
   set tableau;
   where y=1;
@@ -257,8 +257,8 @@ data compte_noncas;
   rename count=n_noncas;
 run;
 
-/* Enfin, on réunit les deux tableaux de façon à avoir les effectifs des cas
-   et des non-cas sur la même ligne pour chaque modalité */
+/* Enfin, on rï¿½unit les deux tableaux de faï¿½on ï¿½ avoir les effectifs des cas
+   et des non-cas sur la mï¿½me ligne pour chaque modalitï¿½ */
 data chp5groupeage;
   merge compte_cas compte_noncas;
   by age;
@@ -284,7 +284,7 @@ proc gplot data=pred;
   plot dfbeta_age*age;
 run;
 
-/* Régression log-binomiale */
+/* Rï¿½gression log-binomiale */
 proc genmod data=chp5groupeage;
 model n_cas/n_total = age / dist=bin link=log aggregate=(age) noscale;
  OUTPUT OUT=PRED pred=prob reschi=rchi resdev=rdev dfbeta=_all_ cooksd=dc;
