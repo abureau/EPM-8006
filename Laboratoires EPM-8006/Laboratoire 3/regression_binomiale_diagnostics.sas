@@ -1,5 +1,5 @@
 /* Illustration de graphiques diagnostiques */
-libname modeli "/workspaces/workspace/Données EPM-8006/donnees";
+libname modeli "/workspaces/workspace/Données EPM-8006";
 
 DATA POL; SET modeli.CHP05;
 
@@ -119,6 +119,12 @@ proc sgplot data=pred;
 	LOESS X = xb Y = rdev / smooth=0.7;
 	REFLINE 0;
 RUN;
+
+/* R�sidu de Pearson en fonction de la diagonale de la matrice de projection (levier)
+   comme dans R */
+proc gplot data=pred;
+  plot rchi*hm=Y;
+run;
 
 proc gplot data=pred;
   plot rdev*prob;
