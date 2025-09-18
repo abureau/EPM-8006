@@ -36,6 +36,6 @@ Ici, on spécifie le paramètre de lissage, mais pas en terme de degrés de libe
 ```{r}
 lissage2 = gam(Y~s(AGE),sp=0.01,data=chp05,family=binomial)
 lissage2
-plot(lissage2)
+plot(lissage2,ylim=c(-8,2),jit=TRUE)
 ```
 
