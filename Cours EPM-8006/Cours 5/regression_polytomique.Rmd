@@ -31,6 +31,16 @@ fit = mlogit(Y ~ 1 | FUME + PREM, data = ds.mlogit,reflevel = 3);
 summary(fit)
 ```
 
+
+```{r}
+plot(fitted(fit,outcome=F)[,1],resid(fit,outcome=F)[,1],main=paste0("Y = ",levels(chp05$Y)[1]),ylim=c(-0.9,0.9))
+```
+```{r}
+plot(fitted(fit,outcome=F)[,2],resid(fit,outcome=F)[,2],main=paste0("Y = ",levels(chp05$Y)[2]),ylim=c(-0.9,0.9))
+```
+```{r}
+plot(fitted(fit,outcome=F)[,3],resid(fit,outcome=F)[,3],main=paste0("Y = ",levels(chp05$Y)[3]),ylim=c(-0.9,0.9))
+```
 ## Avec la fonction multinom
 ```{r}
 library(nnet)
