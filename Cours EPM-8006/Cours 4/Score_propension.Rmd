@@ -1,12 +1,15 @@
 ---
 title: "Calcul d'un score de propension"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 #Importation des données
 
 ```{r}
-fram1 = read.csv(file.choose())
+#fram1 = read.csv(file.choose())
+fram1 = read.csv("../Données/fram1.csv")
 ```
 
 # Modèle de prédiction du tabagisme 
@@ -32,10 +35,15 @@ nipw = w/(mean(w))
 summary(nipw)
 sum(nipw)
 ```
+## Examen de quelques sujets
+```{r}
+head(cbind(fram1[,c("CURSMOKE","BMI","AGE","SEX")],ps,w,nipw))
+```
+
 ## Estimation d'un rapport de cote marginal pour le tabagisme
 ```{r}
 library(geepack)
-model_diabete = geeglm(DIABETES~CURSMOKE,data=fram1,family=binomial,id=RANDID,weights=nipw, scale.fix = T)
+model_diabete = geeglm(DIABETES~CURSMOKE,data=fram1,family=binomial,id=RANDID,weights=w, scale.fix = T)
 summary(model_diabete)
 ```
 ```{r}
@@ -47,3 +55,29 @@ UL = exp(sum.fitEE$coef[-1,1] +
          1.96*sum.fitEE$coef[-1,2])),2)
 ```
 
+## Vérification de l'égalité des moyennes des covariables entre les fumeurs et les non-fumeurs
+
+Séparation de l'échantillon en fumeurs et non-fumeurs
+```{r}
+fram1$nipw = nipw
+fumeurs = fram1[fram1$CURSMOKE==1,]
+nonfumeurs = fram1[fram1$CURSMOKE==0,]
+```
+
+IMC avec pondération
+```{r}
+c(weighted.mean(nonfumeurs$BMI,nonfumeurs$nipw),weighted.mean(fumeurs$BMI,fumeurs$nipw))
+```
+Comparé à IMC sans pondération, on constate une différence nettement réduite
+```{r}
+c(mean(nonfumeurs$BMI),mean(fumeurs$BMI))
+```
+Âge avec pondération
+```{r}
+c(weighted.mean(nonfumeurs$AGE,nonfumeurs$nipw),weighted.mean(fumeurs$AGE,fumeurs$nipw))
+```
+
+Comparé à l'âge sans pondération, on constate une différence nettement réduite
+```{r}
+c(mean(nonfumeurs$AGE),mean(fumeurs$AGE))
+```
