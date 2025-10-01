@@ -24,6 +24,8 @@ proc logistic descending;
       strata STR;
 run;
 
+proc print data=pr03_04;
+run;
 * Façon alternative de former les strates à partir des variables de stratification;
 proc logistic descending;
       model cas = par;
