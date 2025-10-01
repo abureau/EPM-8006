@@ -5,7 +5,7 @@ cards;
  1 0 30 1500  0 0 45 3000   1 1 50 2000  0 1 64 4000
  ;
 
-/* Différence de taux */
+/* Diffï¿½rence de taux */
 PROC GENMOD;
 MODEL A/N=E F / DIST=POISSON LINK=IDENTITY TYPE3;
 RUN;
@@ -15,9 +15,13 @@ PROC GENMOD;
 MODEL A/N=E F / DIST=POISSON LINK=LOG TYPE3;
 ESTIMATE "E" E 1;
 ESTIMATE "taux de base" intercept 1;
+output out=sortie predicted=pred resdev=rdev;
 RUN;
 
-/* Rapport de taux (codage alternatif plus généralisable qui permet inférence exacte)*/
+proc print data=sortie;
+run;
+
+/* Rapport de taux (codage alternatif plus gï¿½nï¿½ralisable qui permet infï¿½rence exacte)*/
 PROC GENMOD data=exm3_9;
 MODEL A= E F / DIST=POISSON LINK=LOG OFFSET=LN TYPE3;
 ESTIMATE "E" E 1;
@@ -32,6 +36,6 @@ run;
 
 proc print;
 run;
-/* Notez que les tests de Wald de la différence de taux et du rapport de taux 
-   sont légèrement différents, alors que le test du rapport de vraisemblance (Type 3)
+/* Notez que les tests de Wald de la diffï¿½rence de taux et du rapport de taux 
+   sont lï¿½gï¿½rement diffï¿½rents, alors que le test du rapport de vraisemblance (Type 3)
    ne change pas */
