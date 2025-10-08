@@ -1,6 +1,8 @@
 ---
 title: "Imputation multiple avec risque de fracture ostéoporotique"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 # Importation des données
 
@@ -10,7 +12,7 @@ osteo = read.csv("osteo5.csv",na.strings=".")
 ```
 ou
 ```{r}
-osteo = read.csv(file.choose(),na.strings=".")
+#osteo = read.csv(file.choose(),na.strings=".")
 ```
 
 ## Remplissage de valeurs manquantes de consommation d'alcool
@@ -48,6 +50,10 @@ osteo2 = osteo[, c("OSQ130", "OSQ170", "OSQ200", "RIAGENDR", "RIDRETH1", "RIDAGE
 library(VIM)
 par(cex=0.8)
 aggr(osteo2)
+```
+Proportion d'observations complètes et avec données manquantes
+```{r}
+prop.table(table(complete.cases(osteo2)))
 ```
 
 ```{r}
@@ -87,7 +93,7 @@ RC
 En somme, on observe une association légèrement protectrice avec la consommation de lait (ligne 2) et les donnees sont compatibles avec des associations allant de modérément protectrices a légèrement délétères..
 
 # Analyse des jeux de données imputés - modele log-lineaire semi-paramétrique
-On ne peut pas utiliser *with()* avec *geeglm()*, il faut donc programmer soi-même une boucle sur les imputations.
+On ne peut pas utiliser *with()* avec *geeglm()* ou *geem*, il faut donc programmer soi-même une boucle sur les imputations.
 ```{r}
 require(geeM)
 estimates = std.err = numeric(imp$m);
@@ -113,5 +119,12 @@ final.results[1,] = c(res$qbar, sqrt(res$t));
 final.results[,3] = final.results[,1] - 1.96*final.results[,2];
 final.results[,4] = final.results[,1] + 1.96*final.results[,2];
 print(exp(final.results[,c(1,3,4)]));
+```
+```{r}
+  # Il reste des valeurs manquantes pour 3 observations
+for(i in 1:imp$m){
+  ds = complete(imp, i);
+  print(sum(!complete.cases(ds)))
+}
 ```
 
