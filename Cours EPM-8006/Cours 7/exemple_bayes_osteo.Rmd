@@ -1,6 +1,8 @@
 ---
 title: "Régression bayésienne"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 On construit un modèle pour déterminer l'effet de la consommation de lait
@@ -24,7 +26,7 @@ osteo = read.csv("osteo5.csv",na.strings=".")
 ```
 ou
 ```{r}
-osteo = read.csv(file.choose(),na.strings=".")
+#osteo = read.csv(file.choose(),na.strings=".")
 ```
 La fonction *MCMClogit* exige que la réponse soit codée 0/1.
 ```{r}
@@ -43,12 +45,12 @@ Le paramètre *prior.scale* correspond à l'écart-type.
 library(arm)
 hanche.approxmod = bayesglm(hanche~cons_reg+cons_var+OSQ130+OSQ170+OSQ200+RIAGENDR+factor(RIDRETH1)+RIDAGEYR+ALQ101+ALQ130+BMXBMI+MCQ160C+MCQ160L+WHD020+WHD110,data=osteo,family=binomial,prior.mean=moy.priori,prior.scale = sqrt(var.priori),prior.scale.for.intercept=1e6, prior.df=Inf)
 summary(hanche.approxmod)
-exp(coef(hanche.approxmod))
 ```
-On calcule les bornes des intervalles de probabilité des rapports de cote.
+# Intervalles de crédibilité
+Approximation normale
 ```{r}
-exp(cbind(coef(hanche.approxmod),"Binf"=coef(hanche.approxmod)-qnorm(0.975)*coef(summary(hanche.approxmod))[,"Std. Error"],"Bsupp"=coef(hanche.approxmod)+qnorm(0.975)*coef(summary(hanche.approxmod))[,"Std. Error"]))
-
+ctab = coef(summary(hanche.approxmod))
+exp(cbind(ctab[2:3,"Estimate"],ctab[2:3,"Estimate"]-qnorm(0.975)*ctab[2:3,"Std. Error"],ctab[2:3,"Estimate"]+qnorm(0.975)*ctab[2:3,"Std. Error"]))
 ```
 
 # Estimation bayésienne par échantilonnage Monte Carlo de chaînes de Markov (MCMC)
@@ -85,7 +87,7 @@ plot(hanche.bayesmod2,auto.layout = F)
 ```
 On multiplie la longueur de la chaîne par 10
 ```{r}
-hanche.bayesmod2b = MCMClogit(hanche~cons_reg+cons_var+OSQ130+OSQ170+OSQ200+RIAGENDR+factor(RIDRETH1)+RIDAGEYR+ALQ101+ALQ130+BMXBMI+MCQ160C+MCQ160L+WHD020+WHD110,data=osteo,burnin = 1000, mcmc = 100000, thin = 100, b0=moy.priori,B0 = 1/var.priori, seed=331133)
+hanche.bayesmod2b = MCMClogit(hanche~cons_reg+cons_var+OSQ130+OSQ170+OSQ200+RIAGENDR+factor(RIDRETH1)+RIDAGEYR+ALQ101+ALQ130+BMXBMI+MCQ160C+MCQ160L+WHD020+WHD110,data=osteo,burnin = 1000, mcmc = 1000000, thin = 100, b0=moy.priori,B0 = 1/var.priori, seed=331133)
 summary(hanche.bayesmod2b)
 ```
 
@@ -93,4 +95,16 @@ Graphiques de traces et de densité
 ```{r}
 par(mfrow=c(2,2))
 plot(hanche.bayesmod2b,auto.layout = F)
+```
+
+# Intervalles de crédibilité
+Approximation normale (pas conseillée)
+```{r}
+stats.tab = summary(hanche.bayesmod2b)$statistics
+exp(cbind(stats.tab[2:3,"Mean"],stats.tab[2:3,"Mean"]-qnorm(0.975)*stats.tab[2:3,"SD"],stats.tab[2:3,"Mean"]+qnorm(0.975)*stats.tab[2:3,"SD"]))
+```
+Quantiles de la distribution a posteriori (préférable)
+```{r}
+qtab = summary(hanche.bayesmod2b)$quantiles
+exp(cbind(stats.tab[2:3,"Mean"],qtab[2:3,"2.5%"],qtab[2:3,"97.5%"]))
 ```
