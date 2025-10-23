@@ -57,3 +57,7 @@ Production des diagrammes de dispersion
 pairs(seizure_large[,grep("Counts",names(seizure_large))],upper.panel = NULL)
 ```
 
+```{r}
+cor(seizure_large[,grep("Counts",names(seizure_large))])
+```
+

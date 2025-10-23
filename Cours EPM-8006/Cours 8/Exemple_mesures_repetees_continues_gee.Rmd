@@ -46,6 +46,13 @@ library(doBy);
 esticon(modGEE.ar1, L = diag(5));
 ```
 
+## Estimation d'un modèle sous indépendance
+```{r}
+library(geeM);
+modGEEm.ind = geem(Counts ~ TX + Visit + TX*Visit + Counts0, data = seizure3, family = gaussian, id = ID, corstr = "ind");
+summary(modGEEm.ind);
+```
+
 # Estimation de comparaisons prédéterminées
 On spécifie successivement la réponse moyenne sous traitement à la visite 1, la réponse moyenne sous placebo à la visite 1 et la différence traitement - placebo à la visite 1.
 ```{r}
@@ -53,7 +60,7 @@ round(esticon(modGEE.ar1, L = rbind(c(1,1,1,31.22,1),
                               c(1,0,1,31.22,0),
                               c(0,1,0,0,1))),4);
 ```
-Pour obtenir les différences entre les groupes traitement à chaque visite, on peut aussi programmer soi-même l'estimation des combinaisons linéaires (et utiliser la sortie de geeM). Notez que les valeurs de l'ordonnée à l'origine, de la variable temps (en 3e position) et du coefficient de count0 (en 4e position) sont 0 car ces variables s'annulent dans la comparaison entre les groupes de traitement.
+Pour obtenir les différences entre les groupes traitement à chaque visite, on peut aussi programmer soi-même l'estimation des combinaisons linéaires (et utiliser la sortie de *geeM*). Notez que les valeurs de l'ordonnée à l'origine, de la variable temps (en 3e position) et du coefficient de count0 (en 4e position) sont 0 car ces variables s'annulent dans la comparaison entre les groupes de traitement.
 ```{r}
 L = matrix(c(0, 1, 0, 0, 1,
              0, 1, 0, 0, 2,
@@ -76,6 +83,12 @@ Comme il n'y a pas d'interaction, une 1re façon de présenter les résultats es
 ```{r}
 signif(esticon(modGEE.ar1, L = c(0,1,0,0,2.5)),3);
 ```
+Pour la moyenne dans chaque groupe du style lsmeans de SAS:
+```{r}
+emmeans(modGEE.ar1,"TX",by="Visit")
+```
+
+
 Une 2e façon est de retirer le terme d'interaction. Comme on n'a pas besoin de combinaisons linéaires, on va utiliser *geem* pour avoir le même résultat que proc genmod de SAS.
 ```{r}
 modGEE2.ar1 = geem(Counts ~ TX + Visit + Counts0, data = seizure3, family = gaussian, id = ID, corstr = "ar1");
