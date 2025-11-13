@@ -1,6 +1,8 @@
 ---
 title: "Modèles mixtes pour mesures répétées continues"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Lecture des données
@@ -37,8 +39,11 @@ summary(modGLS.ar1);
 Modèle de corrélation échangeable pour les erreurs (Compound Symmetry en anglais)
 ```{r}
 library(nlme)
-modGLS.ech = gls(Counts ~ TX + Visit + TX:Visit, data = seizure2, subset = Visit != 0, corr = corCompSymm(,form=~Visit|ID))
+modGLS.ech = gls(Counts ~ TX + Visit + TX:Visit, data = seizure2, subset = Visit != 0, corr = corCompSymm(,form=~1|ID))
 modGLS.ech
+```
+```{r}
+summary(modGLS.ech)
 ```
 
 # Analyse du modèle 2 
@@ -51,7 +56,8 @@ On affiche les variances et calcule la corrélation
 ```{r}
 vc = VarCorr(modLME.intercept)
 vc
-as.numeric(vc[1,1])/sum(as.numeric(vc[,1]))
+cat("Corrélation =", as.numeric(vc[1,1])/sum(as.numeric(vc[,1])),"\n")
+cat("Erreur-type inter-sujet =", sqrt(sum(as.numeric(vc[,1]))),"\n")
 ```
 Avec la fonction *lmer*
 
@@ -120,6 +126,10 @@ On voit une différence s'il y a une structure de corrélation spécifiée
 plot(modGLS.ar1)
 plot(modGLS.ar1,resid(.,type="normalized")~fitted(.),abline=0)
 ```
+```{r}
+plot(modGLS.ech)
+plot(modGLS.ech,resid(.,type="normalized")~fitted(.),abline=0)
+```
 
 ## Diagnostics d'influence
 ```{r}
@@ -164,10 +174,17 @@ modLMER.intercept.MV = lmer(Counts ~ TX + Visit + TX*Visit + (1|ID), data = seiz
 modLMER.intercept.MV
 confint(modLMER.intercept.MV,parm="beta_")
 ```
+Dans ce cas particulier avec un devis équilibré, les estimations des coefficients par MV et par MVR sont identiques, et appliquer la fonction *confint* à l'objet du modèle estimé par MVR ou par MV donne les mêmes intervalles. Ce ne sera pas toujours le cas.
+```{r}
+confint(modLMER.intercept,parm="beta_")
+```
+
 On peut aussi obtenir les intervalles de Wald basés sur la distribution de Student.
 ```{r}
 confint(modLMER.intercept,method="Wald")
 ```
+
+
 # Intervalles de confiance pour les paramètres de variance
 
 Seule l'approche de la vraisemblance de profil est recommandée. On peut calculer les intervalles pour les estimations par MVR (REML) qui sont sans biais. Seule la fonction *confint* appliquée aux objets *lmer* permet ce calcul.
