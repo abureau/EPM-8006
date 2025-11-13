@@ -54,10 +54,12 @@ PROC MIXED DATA = seizure2;
 	CLASS ID TX(REF = first);
 	MODEL counts = visit|TX Counts0/s alpha=0.05 ; 
 	RANDOM intercept visit / SUBJECT = ID TYPE = UN;
-RUN; 
+	store out=sasuser.seizure_pente;
+	RUN; 
 
-
-
+proc plm restore=sasuser.seizure_pente;
+  lsmeans TX / diff;
+run;
 
 
 /*Modèle mixte*/
@@ -175,5 +177,9 @@ PROC SGPLOT DATA = sortie2;
 	SCATTER X = predt Y = scaledresid;
 run;
 
+/* Diagramme de dispersion des résidus transformés vs. valeurs prédites */
+PROC SGPLOT DATA = sortie2;
+	SCATTER X = pred Y = scaledresid;
+run;
 
 
