@@ -1,6 +1,8 @@
 ---
 title: "Traitement des pertes au suivi"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Lecture des données
@@ -9,6 +11,47 @@ amenorrhea = read.table("amenorrhea.dat",na.strings = ".")
 names(amenorrhea) = c("ID","dose","temps","y")
 head(amenorrhea)
 ```
+# Imputation multiple
+
+## Transformation au format large
+```{r}
+amenlarge = reshape(amenorrhea,timevar="temps",idvar=c("ID","dose"),direction="wide")
+head(amenlarge)                    
+```
+
+## Imputation
+```{r,results==FALSE}
+library(mice)
+amenlarge_imp=mice(data=amenlarge,m=25,seed=98,blocks=list("y.2","y.3","y.4"), formulas=list("y.2"=~y.1*dose,"y.3"=~y.1*dose+y.2*dose,"y.4"=~y.1*dose+y.2*dose+y.3*dose))
+```
+
+Fonction pour l'analyse. Il faut exécuter la transformation du format large des données imputées au format long pour l'analyse à l'intérieur de la fonction.
+```{r}
+library(tidyr)
+estime.mod = function(fm,ID,dose,y.1,y.2,y.3,y.4)
+{
+  amenimp <- pivot_longer(data.frame(ID,dose,y.1,y.2,y.3,y.4),cols = starts_with("y"),
+    names_to = c(".value","temps"),
+    names_sep = "\\.",
+    values_to = "y")
+  # On décale le temps de -1 pour ramener le temps initial à 0 comme Fitzmaurice, Laird et Ware. 
+  amenimp$temps = as.numeric(amenimp$temps)-1
+  amenimp$temps2 = amenimp$temps^2
+  geeglm(fm,data=amenimp,family=binomial,corstr="unstr",id=ID,scale.fix=T)
+}
+```
+
+### Analyse des données après imputation multiple (sous l'hypothèse MAR)
+```{r}
+library(geepack)
+amen_multimod = with(amenlarge_imp,estime.mod(y~dose*temps+dose*temps2,ID,dose,y.1,y.2,y.3,y.4))
+```
+```{r}
+amen_combine = pool(amen_multimod)
+amen_combine
+```
+
+# Pondération par la probabilité inverse de censure
 
 # Ajout de variables pour l'observation précédente et la présence du sujet
 On décale aussi le temps de -1 pour ramener le temps initial à 0 comme Fitzmaurice, Laird et Ware.
