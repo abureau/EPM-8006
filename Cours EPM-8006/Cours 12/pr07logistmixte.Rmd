@@ -61,7 +61,7 @@ summary(model1.gee.log)
 Pour obtenir un intervalle de confiance pour le risque relatif, on calcule l'intervalle sur l'échelle log et on prend l'exponentielle.
 ```{r}
 library(doBy);
-tmp = esticon(model1.gee.log,L=diag(2))[,1:2]
+tmp = esticon(model1.gee.log,L=diag(2))
 exp(cbind(tmp[,1],tmp[,1]-qnorm(0.975)*tmp[,2],tmp[,1]+qnorm(0.975)*tmp[,2]));
 ```
 # Modèle logistique avec effet aléatoire pour la clinique et l'effet du traitement

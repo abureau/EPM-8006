@@ -1,6 +1,8 @@
 ---
 title: "modèle logistique mixte pour statut respiratoire"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 # Lecture des données
 ```{r}
@@ -15,10 +17,17 @@ library(MASS)
 library(nlme)
 resp$treatment = factor(resp$treatment,levels = c("P","A"))
 resp$v=factor(resp$visit,levels = c(4,1,2,3))
-resp$age2=resp$age^2
-respGLMM = glmmPQL(dichot~v*treatment+sex+age+age2+baseline,random=~1|center,corr = corAR1(,form=~visit|center/id),data=resp,family=binomial)
+resp$sex=factor(resp$sex,levels = c("M","F"))
+respGLMM = glmmPQL(dichot~v*treatment+sex+age+baseline,random=~1|center,corr = corAR1(,form=~visit|center/id),data=resp,family=binomial)
 summary(respGLMM)
 ```
+
+Pour obtenir des tests de type 3, il faut utiliser la fonction *joint_tests*.
+```{r}
+library(emmeans)
+joint_tests(respGLMM)
+```
+
 Effet du traitement
 ```{r}
 library(multcomp)
@@ -27,10 +36,39 @@ summary(tr)
 exp(confint(tr)$confint)
 ```
 
-
-On peut aussi spécifier un effet aléatoire pour le sujet en plus d'une variance résiduelle
+On affiche les variances
 ```{r}
+vc = VarCorr(respGLMM)
+vc
+```
+```{r}
+plot(respGLMM)
+rPearson = resid(respGLMM,type="pearson")
+pred = predict(respGLMM)
+plot(pred,rPearson)
+abline(h=0)
+lines(lowess(pred,rPearson),col="blue")
+```
+```{r}
+rPearson = resid(respGLMM,type="pearson")
+plot(resp$age, rPearson,ylab="Résidus de Pearson")
+abline(h=0)
+lines(lowess(resp$age,rPearson),col="blue")
+```
+## Analyse avec effet aléatoire sur le sujet
 
+glmmPQL estime alors néanmoins une variance résiduelle. Cela diffère du comportement de PROC GLIMMIX de SAS quand on ne spécifie pas de variance résiduelle.
+```{r}
+respGLMM = glmmPQL(dichot~v*treatment+sex+age+baseline,random=~1|center/id,data=resp,family=binomial)
+summary(respGLMM)
+```
+```{r}
+vc = VarCorr(respGLMM)
+vc
+```
+
+On peut aussi spécifier une structure de variance résiduelle en plus d'un effet aléatoire pour le sujet. Comme l'effet aléatoire sur le sujet capture une corrélation échangeable, il ne reste plus beaucoup de corrélation à expliquer par un terme autorégressif.
+```{r}
 respGLMM = glmmPQL(dichot~v*treatment+sex+age+baseline,random=~1|center/id,corr = corAR1(,form=~visit|center/id),data=resp,family=binomial)
 summary(respGLMM)
 ```
@@ -40,11 +78,6 @@ library(multcomp)
 tr = glht(respGLMM,linfct="treatmentA+0.25*v1:treatmentA+0.25*v2:treatmentA+0.25*v3:treatmentA=0")
 summary(tr)
 exp(confint(tr)$confint)
-```
-```{r}
-plot(resp$age,residuals(respGLMM))
-lines(lowess(resp$age,residuals(respGLMM)),col="red")
-abline(h=0)
 ```
 
 Analyse par maximum de vraisemblance avec approximation de Laplace
