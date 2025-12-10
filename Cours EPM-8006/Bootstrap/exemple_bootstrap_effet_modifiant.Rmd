@@ -6,22 +6,31 @@ output: html_notebook
 # Fonction d'analyse
 Il faut définir une fonction qui calcule le RERI en prenant un premier argument *data* et un deuxième argument qui peut prendre différentes formes. L'option par défaut est un vecteur d'indices définissant un échantillon bootstrap.
 ```{r}
-library(epiR)
 RERI = function(data,indices)
 {
   bd<-data[indices,]
-  diabete.mod = glm(DIABETES~SEX*CURSMOKE+AGE+BMI+SYSBP+DIABP,data=bd,family = poisson(link=log))
-  # Ici on doit retourner seulement l'estimation du RERI
-epi.interaction(diabete.mod,coef=c(2,3,8),param="product")$reri$est
+  model = glm(DIABETES~SEX*CURSMOKE+AGE+BMI+SYSBP+DIABP,data=bd,family = poisson(link=log))
+  # Les prochaines lignes sont tirées de la fonction epi.interaction du module epiR
+        coef=c(2,3,8)
+        theta1 <- as.numeric(model$coefficients[coef[1]])
+        theta2 <- as.numeric(model$coefficients[coef[2]])
+        theta3 <- as.numeric(model$coefficients[coef[3]])
+        exp(theta1 + theta2 + theta3) - exp(theta1) - 
+            exp(theta2) + 1
 }
 ```
 Une autre option est que le deuxième argument soit un poids pour chaque observation (qui prend les valeurs 0, 1/n, 2/n, ... selon le nombre de fois où l'observation se retrouve dans l'échantillon bootstrap)
 ```{r}
 RERIw = function(data,weights)
 {
-  diabete.mod = glm(DIABETES~SEX*CURSMOKE+AGE+BMI+SYSBP+DIABP,data=data,weights=weights,family = poisson(link=log))
-  # Ici on doit retourner seulement l'estimation du RERI
-epi.interaction(diabete.mod,coef=c(2,3,8),param="product")$reri$est
+  model = glm(DIABETES~SEX*CURSMOKE+AGE+BMI+SYSBP+DIABP,data=data,weights=weights,family = poisson(link=log))
+  # Les prochaines lignes sont tirées de la fonction epi.interaction du module epiR
+        coef=c(2,3,8)
+        theta1 <- as.numeric(model$coefficients[coef[1]])
+        theta2 <- as.numeric(model$coefficients[coef[2]])
+        theta3 <- as.numeric(model$coefficients[coef[3]])
+        exp(theta1 + theta2 + theta3) - exp(theta1) - 
+            exp(theta2) + 1
 }
 ```
 #Importation des données
@@ -69,7 +78,7 @@ Le calcul de l'intervalle BCa échoue sur l'objet obtenu avec la fonction qui pr
 RERIsexe_tabac.IC = boot.ci(RERIsexe_tabac.boot,index=1,type="bca")
 RERIsexe_tabac.IC
 ```
-Par contre, le calcul devrait réussir sur l'objet obtenu avec la fonction qui prend des poids (à revoir).
+Par contre, le calcul fonctionne sur l'objet obtenu avec la fonction qui prend des poids.
 ```{r}
 RERIsexe_tabac.IC = boot.ci(RERIsexe_tabac.bootw,index=1,type="bca")
 RERIsexe_tabac.IC
