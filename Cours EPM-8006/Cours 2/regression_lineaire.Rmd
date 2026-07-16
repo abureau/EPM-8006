@@ -62,6 +62,18 @@ library(sandwich)
 ET.robuste = sqrt(diag(sandwich(reglin)))
 cbind("coef"=coef(reglin),"ET robuste"=ET.robuste,"borne inf 95%" = coef(reglin) - qnorm(0.975)*ET.robuste,"borne sup 95%" = coef(reglin) + qnorm(0.975)*ET.robuste)
 ```
+On peut aussi utiliser la fonction *geeglm* pour obtenir l'estimation robuste de la variance en précisant que chaque individu forme sa propre grappe.
+```{r}
+library(geepack)
+reglinEE = geeglm(SYSBP~SEX+AGE+BMI,data=fram1,id=RANDID)
+summary(reglinEE)
+```
+Pour un intervalle de confiance, notez qu'il faut spécifier la fonction *confint.default*. La fonction *confint* tout court produit une erreur.
+```{r}
+confint.default(reglinEE)
+```
+
+
 
 #Vérification de la multicollinéarité
 Le module *mctest* offre divers diagnostics de multicollinéarité. La fonction *imcdiag* de ce module produit les facteurs d'inflation de la variance (VIF) entre autres. 

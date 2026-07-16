@@ -38,12 +38,11 @@ summary(modGEEm.ar1);
 ```
 Avec *geeM* on retrouve les mêmes estimations qu'avec proc genmod de SAS. Ceci m'incite à croire que ce sont les résultats de *geeM* qui sont corrects.
 
-On peut estimer des combinaisons linéaires et leur intervalle de confiance à partir des objets de *geeglm* avec la fonction *esticon*. Malheureusement, cette fonction ne s'applique pas aux objets produits par *geeM*. Les fonctions *confint* et *glht* que nous avons utilisées précédemment pour obtenir des intervalles de confiance et estimer des combinaisons linéaires avec des modèles linéaires ne s'appliquent ni aux objets de *geeglm*, ni aux objets de *geeM*.
+On peut obtenir des intervalles de confiance avec la fonction *confint.default* (Attention! *confint* tout court produit une erreur). Malheureusement, ces fonctions ne s'appliquent pas aux objets produits par *geeM*. La fonction *glht* que nous avons utilisée précédemment pour estimer des combinaisons linéaires avec des modèles linéaires ne s'applique ni aux objets de *geeglm*, ni aux objets de *geeM*.
 
-Nous allons appliquer *esticon* aux objets de *geeglm* pour fin d'illustration, mais les résultats peuvent être invalides. Pour obtenir des intervalles de confiance, on spécifie des combinaisons linéaires incluant chacun un coefficient (matrice diagonale):
+Nous allons appliquer *confint.default* aux objets de *geeglm* pour fin d'illustration, mais les résultats peuvent être invalides. 
 ```{r}
-library(doBy);
-esticon(modGEE.ar1, L = diag(5));
+confint.default(modGEE.ar1);
 ```
 
 ## Estimation d'un modèle sous indépendance
@@ -54,7 +53,7 @@ summary(modGEEm.ind);
 ```
 
 # Estimation de comparaisons prédéterminées
-On spécifie successivement la réponse moyenne sous traitement à la visite 1, la réponse moyenne sous placebo à la visite 1 et la différence traitement - placebo à la visite 1.
+On spécifie successivement la réponse moyenne sous traitement à la visite 1, la réponse moyenne sous placebo à la visite 1 et la différence traitement - placebo à la visite 1. On peut estimer des combinaisons linéaires à partir des objets de *geeglm* avec la fonction *esticon*. 
 ```{r}
 round(esticon(modGEE.ar1, L = rbind(c(1,1,1,31.22,1),
                               c(1,0,1,31.22,0),
