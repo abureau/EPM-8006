@@ -1,0 +1,103 @@
+---
+title: "Validation croisée avec tidymodels"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r}
+library(tidymodels)
+```
+
+# Lecture du jeu de données
+```{r}
+chp09 <- read.csv("chp09.csv")
+```
+
+Alternative: ouvrir une fenêtre pour choisir le fichier
+```{r}
+#chp09 = read.csv(file.choose(),header=TRUE)
+```
+
+# Recodage d'une variable et conversion de la variable DECES en facteur
+```{r}
+chp09$COMA <- ifelse(chp09$CONS==0,0,1)
+df_model <- chp09 |>
+  mutate(DECES = factor(DECES, levels = c(0, 1), labels = c("non", "oui"))) |>
+  select(DECES, ADM_HIS, AGE, SYS, SOIN, COMA)
+```
+
+# Initialisation des métriques de performance
+```{r}
+metrics <- metric_set(roc_auc, accuracy, brier_class)
+metrics
+```
+
+# Division aléatoire des données en 5 plis en stratifiant sur la variable DECES
+```{r}
+set.seed(99)
+folds <- vfold_cv(df_model, v = 5, strata = DECES)
+folds
+```
+
+# Définition du flux d'exécution d'une séquence de modèles de régression logistique
+```{r}
+log_spec <- logistic_reg() |>
+  set_engine("glm") |>
+  set_mode("classification")
+
+formulas <- list(
+  f1  = DECES ~ COMA,
+  f2  = DECES ~ AGE + COMA,
+  f3  = DECES ~ AGE + SOIN + COMA,
+  f4  = DECES ~ AGE + SYS + SOIN + COMA,
+  f5  = DECES ~ ADM_HIS + AGE + SYS + SOIN + COMA
+)
+log_wfset <- workflow_set(
+  preproc = formulas,
+  models = list(logistic_reg = log_spec),
+  cross = FALSE)
+```
+
+# Estimation des modèles sur les 5 plis
+On demande aussi de sauvegarder les prédictions des modèles
+```{r}
+ctrl <- control_resamples(save_pred = TRUE)
+log_wfset_res <- log_wfset |>
+  workflow_map("fit_resamples", resamples = folds, metrics = metrics, control = ctrl, verbose = FALSE)
+```
+
+# Affichage de l'AUC
+```{r}
+collect_metrics(log_wfset_res) |>
+  filter(.metric == "roc_auc") |>
+  select(wflow_id, .metric, mean, std_err) |>
+  arrange(.metric, desc(mean))
+```
+
+
+# Calcul des scores individuels par validation croisée
+
+```{r}
+test.pred = collect_predictions(log_wfset_res)
+```
+
+
+# Calcul de la courbe ROC pour chacun des 5 modèles à partir des prédictions sur les jeux de validation
+
+```{r}
+roc_all <- test.pred |>
+  group_by(wflow_id) |>
+  roc_curve(truth = DECES, .pred_non) |>
+  ungroup()
+roc_all
+```
+# Affichage des courbes ROC
+```{r}
+library(ggplot2)
+
+ggplot(roc_all, aes(x = 1 - specificity, y = sensitivity, color = wflow_id)) +
+  geom_path(linewidth = 0.8) +
+  geom_abline(linetype = "dashed", color = "grey60") +
+  coord_equal()
+```
