@@ -1,13 +1,18 @@
 ---
 title: "Exemple de sélection de modèle en contexte causal"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
 ---
-#Importation des données
+# Importation des données
 
 ```{r}
-fram1 = read.csv(file.choose())
+#fram1 = read.csv(file.choose())
+fram1 = read.csv("/Users/alexandrebureau/Documents/MonTravail/cours/Concepts avancés en modélisation statistique/Données/fram1.csv");
 ```
-#Quelques statistiques descriptives
+# Quelques statistiques descriptives
 ```{r}
 summary(fram1[,c("AGE","SYSBP","DIABP","BMI","CIGPDAY")])
 tabsex = table(fram1$SEX)
@@ -22,7 +27,7 @@ cigpday = 0.
 ```{r}
 tapply(fram1$CIGPDAY,fram1$CURSMOKE,mean,na.rm=T)
 ```
-#Stratégie d'analyse
+# Stratégie d'analyse
 
 On veut estimer l'effet du tabagisme sur la pression artérielle systolique.
 Puisqu'on dispose de données transversales, la tâche est plus difficile.
@@ -48,7 +53,7 @@ des variables SEX, CURSMOKE et DIABETES seront entrées dans le modèle. Je n'in
 variables d'interaction. Toutefois, remarquons que pour le tabagisme, il y a une relation
 spéciale entre les deux variables (CIGPDAY = 0 <=> cursomke = 0).
 
-#Quelques statistiques descriptives en fonction du statut d'exposition
+# Quelques statistiques descriptives en fonction du statut d'exposition
 Dans un contexte causal, il est généralement recommandé de présenter des statistiques
 descriptives en fonction du statut d'exposition.
 (Moyenne + SD ou nombre + % selon le type de variable).

@@ -1,12 +1,15 @@
 ---
 title: "Effet modifiant en régression linéaire"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 #Importation des données de fram1
 
 ```{r}
-fram1 = read.csv(file.choose())
+#fram1 = read.csv(file.choose())
+fram1 = read.csv("/Users/alexandrebureau/Documents/MonTravail/cours/Concepts avancés en modélisation statistique/Données/fram1.csv");
 ```
 
 #Calcul de la moyenne de la tension systolique par sexe et statut tabagique
