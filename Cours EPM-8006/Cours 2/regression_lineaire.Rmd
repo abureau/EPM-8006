@@ -90,6 +90,9 @@ vif(reglin)
 Différence dans la valeur du beta de l'IMC due à la suppression d'une observation
 ```{r}
 dfb = dfbetas(reglin);
+plot(fram1$RANDID,abs(dfb[,"BMI"]),type="h")
+```
+```{r}
 dfb[,"BMI"][abs(dfb[,"BMI"]) > 0.2]
 fram1$RANDID[abs(dfb[,"BMI"]) > 0.2]
 ```
@@ -97,5 +100,7 @@ fram1$RANDID[abs(dfb[,"BMI"]) > 0.2]
 Distance de Cook
 ```{r}
 plot(y = cooks.distance(reglin), x = fram1$RANDID);
+```
+```{r}
 fram1$RANDID[cooks.distance(reglin) > 0.03];
 ```
