@@ -1,22 +1,24 @@
 ---
 title: "Introduction à R"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
-#Exemple d'importation des données
+# Exemple d'importation des données
 
 ```{r}
 fram1 = read.csv("/Users/alexandrebureau/Documents/MonTravail/cours/Concepts avancés en modélisation statistique/Données/fram1.csv")
 ```
 Alternative pour ouvrir une fenêtre pour choisir le fichier:
 ```{r}
-fram1 = read.csv(file.choose())
+#fram1 = read.csv(file.choose())
 ```
-#Vérifier que l'importation s'est bien déroulée
+# Vérifier que l'importation s'est bien déroulée
 ```{r}
 str(fram1)
 head(fram1,n=10)
 ```
-#Quelques statistiques descriptives
+# Quelques statistiques descriptives
 Plusieurs fonctions de R s'appliquent à toutes les variables. Il est utile de retirer la variable RANDID pour les statistiques descriptives
 ```{r}
 fram1_sansID = fram1[,-1]
@@ -66,7 +68,7 @@ d'hypertension:
 fram1b_ht = fram1b[fram1b$hypertension==1,-1]
 apply(fram1b_ht,2,favstats)
 ```
-#Sauvegarder son travail
+# Sauvegarder son travail
 
 Quand vous quittez RStudio ou l'interface de base de R, il va vous demander si vous voulez sauvegarder votre espace de travail. Si vous le faite, R enregistrera tous les objets de votre session de travail dans un fichier caché appelé *.RData*. Vous pouvez aussi sauvegarder un ou plusieurs objets dans un fichier auquel vous devez donner l'extension *.RData* si vous voulez que R le reconnaisse par la suite:
 ```{r}
