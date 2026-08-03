@@ -1,0 +1,61 @@
+---
+title: "Exemple de séparation quasi-complète"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Mise en contexte
+En divisant le jeu de données chp09 en jeu d'entraînement et de test, le modèle de Claude que j'utilisais dans Github Copilot a remarqué qu'il y avait séparation quasi complète des décès sur la variable COMA. Voici le code qui a généré ce jeu de données. Pour une raison inexpliquée, le code ne reproduit pas toujours le même jeu de données, même en fixant le même germe de nombres aléatoires.
+
+```{r}
+df <- read.csv("chp09.csv")
+df$COMA <- ifelse(df$CONS == 0, 0, 1)
+
+library(tidymodels)
+df_model <- df |>
+  mutate(DECES = factor(DECES, levels = c(0, 1), labels = c("no", "yes"))) |>
+  select(DECES, SEXE, ADM_HIS, ACC, FUME, AGE, SYS, SERV, SOIN, COMA)
+
+set.seed(7461)
+split <- initial_split(df_model, strata = DECES)
+train <- training(split)
+```
+
+## Chargement des données
+
+Je procède donc au chargement du jeu de données d'entraînement sauvegardé.
+```{r}
+train = read.csv("train.csv")
+train$DECES=factor(train$DECES)
+dim(train)
+```
+
+## Illustration de la séparation quasi-complète
+```{r}
+table(train$DECES,train$COMA)
+```
+
+# Illustration de l'impact de la pénalisation de Firth sur l'estimation d'un modèle
+
+On prend un modèle à 3 variables que vous reverrez au laboratoire 5 et que le modèle de Claude appelle "reduced".
+```{r}
+library(logistf)
+firth_reduced <- logistf(DECES ~ AGE + SOIN + COMA, data = train)
+
+glm_reduced <- glm(DECES ~ AGE + SOIN + COMA, data = train, family = binomial())
+
+se_firth_reduced <- sqrt(diag(firth_reduced$var))
+names(se_firth_reduced) <- names(firth_reduced$coefficients)
+
+comparaison <- data.frame(
+  terme          = names(coef(glm_reduced)),
+  coef_glm       = coef(glm_reduced),
+  se_glm         = summary(glm_reduced)$coefficients[, "Std. Error"],
+  coef_firth     = firth_reduced$coefficients,
+  se_firth       = se_firth_reduced
+)
+rownames(comparaison) <- NULL
+comparaison
+```
+On remarque une nette atténuation des coefficients et une réduction importante de l'erreur type.
