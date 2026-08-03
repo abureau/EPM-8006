@@ -1,17 +1,20 @@
 ---
 title: "Régression logistique"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-#Importation des données
+# Importation des données
 
 ```{r}
-fram1 = read.csv(file.choose())
+#fram1 = read.csv(file.choose())
+fram1 = read.csv("/Users/alexandrebureau/Documents/MonTravail/cours/Concepts avancés en modélisation statistique/Données/fram1.csv");
 ```
 
-#Modèle de base
+# Modèle de base
 
-La fonction *summary* produit les intervalles de confiance et tests de Wald pour les coefficients
+La fonction *summary* produit les tests de Wald pour les coefficients
 ```{r}
 reglogist = glm(DIABETES~SEX+CURSMOKE+AGE+BMI,data=fram1,family=binomial)
 summary(reglogist)
@@ -22,7 +25,7 @@ Affichage des rapports de cote avec intervalles de confiance de Wald et tests d'
 library(epiDisplay)
 logistic.display(reglogist,decimal=3)
 ```
-#Tests d'hypothèses multiples
+# Tests d'hypothèses multiples
 
 Pour tester simultanément plusieurs coefficients, il faut estimer un modèle avec et un modèle sans les coefficients à tester. La fonction *anova* produit un test du rapport de vraisemblance.
 ```{r}

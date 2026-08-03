@@ -1,16 +1,18 @@
 ---
 title: "Régression log-binomiale"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-#Importation des données
+# Importation des données
 
 ```{r}
 chp04 = read.table("chp04.txt",header=TRUE)
 ```
 Alternative: ouvrir une fenêtre pour choisir le fichier
 ```{r}
-chp04 = read.table(file.choose(),header=TRUE)
+#chp04 = read.table(file.choose(),header=TRUE)
 ```
 
 # Recodage de variables
@@ -24,8 +26,9 @@ table(chp04$prem01)
 ```
 
 # Estimation par maximum de vraisemblance: 
+On encapsule l'appel de *glm* dans la fonction *try* pour éviter que l'erreur de convergence empêche le traitement du document.
 ```{r}
-model1 = glm(prem01~AGE + par0 + par1 + GEST + gest32 + GEMEL + TRANSF,data=chp04,family=binomial(link="log"))
+model1 = try(glm(prem01~AGE + par0 + par1 + GEST + gest32 + GEMEL + TRANSF,data=chp04,family=binomial(link="log")))
 ```
 
 Problème de convergence!
@@ -48,6 +51,24 @@ On peut utiliser le même truc qu'en SAS et utiliser une procédure pour les éq
 library(geepack)
 model2ee = geeglm(prem01~AGE + par0 + par1 + GEST + gest32 + GEMEL + TRANSF,data=chp04,family=poisson(link="log"),id=IDN,scale.fix = T)
 summary(model2ee)
+```
+Pour un intervalle de confiance, notez qu'il faut spécifier la fonction *confint.default*. La fonction *confint* tout court produit une erreur.
+```{r}
+exp(confint.default(model2ee))
+```
+On peut aussi le programmer soi-même et afficher le RR par la même occasion (donc on enlève l'ordonnée à l'origine avec -1).
+```{r}
+sum.fitEE = summary(model2ee)
+round(data.frame(RR = exp(sum.fitEE$coef[-1,1]),
+                 LL = exp(sum.fitEE$coef[-1,1] -
+                          1.96*sum.fitEE$coef[-1,2]),
+                 UL = exp(sum.fitEE$coef[-1,1] +
+                          1.96*sum.fitEE$coef[-1,2])),
+      2);
+```
+Mélange des deux approches pour tout avoir avec un code plus concis.
+```{r}
+round(exp(data.frame(RR = sum.fitEE$coef[-1,1],confint.default(model2ee)[-1,])),2)
 ```
 
 # Régression non-linéaire avec erreurs normales
