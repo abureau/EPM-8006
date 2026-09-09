@@ -1,16 +1,18 @@
 ---
 title: "Régression logistique conditionnelle"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-#Importation des données
+# Importation des données
 
 ```{r}
 pr03_04 = read.table("exm08_04.txt",header=TRUE)
 ```
 Alternative: ouvrir une fenêtre pour choisir le fichier
 ```{r}
-pr03_04 = read.table(file.choose(),header=TRUE)
+#pr03_04 = read.table(file.choose(),header=TRUE)
 ```
 
 # Recodage de variables

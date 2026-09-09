@@ -1,11 +1,14 @@
 ---
 title: "Calcul du RERI"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
-#Importation des données
+# Importation des données
 
 ```{r}
-fram1 = read.csv(file.choose())
+#fram1 = read.csv(file.choose())
+fram1 = read.csv("/Users/alexandrebureau/Documents/MonTravail/cours/Concepts avancés en modélisation statistique/Données/fram1.csv");
 ```
 # Estimation du modèle avec terme d'interaction comme sur les diapos
 On utilise la fonction *confint.lm* pour obtenir des intervalles de confiance de Wald. Utiliser *confint* tout court sur un objet *glm* va calculer des intervalles de confiance du rapport de vraisemblance. Dans le cas présent, le calcul de ces intervalles occasionne des problèmes de convergence.
@@ -33,7 +36,7 @@ fram1$d[fram1$SEX == 0 & fram1$CURSMOKE == 1] <- 2
 fram1$d[fram1$SEX == 1 & fram1$CURSMOKE == 1] <- 3
 fram1$d <- factor(fram1$d)
 ```
-##Estimation du modèle avec variable recodée des combinaisons de sexe et statut tabagique
+## Estimation du modèle avec variable recodée des combinaisons de sexe et statut tabagique
 ```{r}
 diabete.mod = glm(DIABETES~d+AGE+BMI+SYSBP+DIABP,data=fram1,family = binomial(link=log))
 summary(diabete.mod)
