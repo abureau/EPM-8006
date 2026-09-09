@@ -1,15 +1,18 @@
 ---
 title: "Régression linéaire"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-#Importation des données
+# Importation des données
 
 ```{r}
-fram1 = read.csv(file.choose())
+#fram1 = read.csv(file.choose())
+fram1 = read.csv("/Users/alexandrebureau/Documents/MonTravail/cours/Concepts avancés en modélisation statistique/Données/fram1.csv");
 ```
 
-#Modèle de base
+# Modèle de base
 R est un environnement basé sur des fonctions qui manipulent des objets. On assigne le résultat d'une analyse à un objet, et on applique des fonctions à cet objet pour afficher les résultats. L'affichage minimal est produit par la fonction *print* qui est invoquée implicitement quand on tape le nom d'un objet:
 ```{r}
 reglin = lm(SYSBP~SEX+AGE+BMI,data=fram1)
@@ -25,7 +28,7 @@ Pour les intervalles de confiance, c'est la fonction *confint*. Pour afficher le
 ```{r}
 cbind(coef(reglin),confint(reglin))
 ```
-#Tests d'hypothèses multiples
+# Tests d'hypothèses multiples
 
 Pour tester simultanément plusieurs coefficients, il faut estimer un modèle avec et un modèle sans les coefficients à tester. Les termes d'interactions peuvent être spécifiés directement dans la formule du modèle en entrant les termes impliqués séparés par ":". Contrairement à SAS, dans R, la notation "*" spécifie tous les termes impliquant deux variables. Ainsi, les deux expression suivantes donnent le même modèle :
 ```{r}
@@ -54,7 +57,17 @@ La fonction *plot* appliquée à un objet de modèle linéaire produits des grap
 plot(reglin,which=1:5)
 ```
 
-#Estimation robuste de la variance
+## Résidus studentisés
+```{r}
+library(MASS)
+res.std = studres(reglin); # residus standardises
+plot(y = res.std, x = fram1$AGE, pch = 16);
+lines(lowess(y = res.std, x = fram1$AGE), col = "brown", lwd = 3);
+abline(h = 0, lwd = 2, col = "purple");
+```
+
+
+## Estimation robuste de la variance
 
 La fonction *sandwich* du module du même nom produit une estimation robuste de la matrice de variance-covariance des estimations des coefficients. Il faut en extraire les erreurs types soit même.
 ```{r}
@@ -75,7 +88,7 @@ confint.default(reglinEE)
 
 
 
-#Vérification de la multicollinéarité
+## Vérification de la multicollinéarité
 Le module *mctest* offre divers diagnostics de multicollinéarité. La fonction *imcdiag* de ce module produit les facteurs d'inflation de la variance (VIF) entre autres. 
 ```{r}
 library(mctest)
@@ -90,9 +103,6 @@ vif(reglin)
 Différence dans la valeur du beta de l'IMC due à la suppression d'une observation
 ```{r}
 dfb = dfbetas(reglin);
-plot(fram1$RANDID,abs(dfb[,"BMI"]),type="h")
-```
-```{r}
 dfb[,"BMI"][abs(dfb[,"BMI"]) > 0.2]
 fram1$RANDID[abs(dfb[,"BMI"]) > 0.2]
 ```
@@ -100,7 +110,5 @@ fram1$RANDID[abs(dfb[,"BMI"]) > 0.2]
 Distance de Cook
 ```{r}
 plot(y = cooks.distance(reglin), x = fram1$RANDID);
-```
-```{r}
 fram1$RANDID[cooks.distance(reglin) > 0.03];
 ```

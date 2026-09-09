@@ -26,7 +26,7 @@ summary(modA)
 ```
 # Estimation des contrastes avec tests d'hypothèses et intervalles de confiance
 
-Ces estimations permettent de remplir le tableau de la diapo 38 du cours 2.
+Ces estimations permettent de remplir le tableau de la diapo 36 du cours 2.
 
 Différence entre les hommes fumeurs et les femmes non-fumeuses:
 ```{r}
