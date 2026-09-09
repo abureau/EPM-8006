@@ -1,16 +1,18 @@
 ---
 title: "Régression logistique conditionnelle"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-#Importation du jeu de données apparié
+# Importation du jeu de données apparié
 
 ```{r}
 exe03_04 = read.table("exm08_04.txt",header=TRUE)
 ```
 Alternative: ouvrir une fenêtre pour choisir le fichier
 ```{r}
-exe03_04 = read.table(file.choose(),header=TRUE)
+#exe03_04 = read.table(file.choose(),header=TRUE)
 ```
 
 # Recodage de la variable d'exposition
@@ -36,14 +38,13 @@ abline(h=0)
 lines(lowess(exe03_04$GEST,residuals(model1,type="deviance")),col="red")
 ```
 
-
 #Importation du jeu de données original
 ```{r}
 chp04 = read.table("chp04.txt",header=TRUE)
 ```
 Alternative: ouvrir une fenêtre pour choisir le fichier
 ```{r}
-chp04 = read.table(file.choose(),header=TRUE)
+#chp04 = read.table(file.choose(),header=TRUE)
 ```
 
 # Recodage des variables d'exposition et d'issue
@@ -56,7 +57,8 @@ chp04$prem = ifelse(chp04$PREM==1,1,0)
 ```{r}
 modstd = glm(prem~membran+AGE+GEST,data=chp04,family=binomial)
 summary(modstd)
-exp(coef(modstd))
+library(epiDisplay)
+logistic.display(modstd)
 ```
 
 
