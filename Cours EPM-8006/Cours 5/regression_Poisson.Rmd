@@ -1,9 +1,11 @@
 ---
 title: "Régression de Poisson"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-#Importation des données
+# Importation des données
 
 ```{r}
 taux = read.table("taux.txt",header=TRUE)
@@ -15,6 +17,7 @@ taux
 fit = glm(A~E+F+offset(log(N)),data=taux,family = poisson(link="log"))
 summary(fit)
 ```
+
 # Tests du rapport de vraisemblance
 ```{r}
 anova(fit,test="Chi")
@@ -31,4 +34,15 @@ Ncas
 Ncas/taux$N
 ```
 
+# Estimation du modèle de Poisson avec paramètre de dispersion
+
+Attention! Le paramètre de dispersion est estimé par la statistique du rapport de vraisemblance divisée par le nombre de degrés de liberté. Ici il reste un seul degré de liberté résiduel. Ça explique aussi pourquoi une statistique de t de 4.12 donne une valeur p de 0.12.
+```{r}
+fitod = glm(A~E+F+offset(log(N)),data=taux,family = quasipoisson(link="log"))
+summary(fitod)
+```
+# Anova tenant compte du paramètre de dispersion
+```{r}
+anova(fitod,test="F")
+```
 

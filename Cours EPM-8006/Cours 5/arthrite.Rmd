@@ -69,10 +69,31 @@ Les rapports de cote sont fournis dans la section "Exponentiated coefficients" d
 ```{r}
 exp(cbind(coef(model1.vglm),confint(model1.vglm)))
 ```
+```{r}
+plot(fitted(model1.vglm)[,1],resid(model1.vglm)[,1],main=colnames(resid(model1.vglm))[1])
+lines(lowess(y = resid(model1.vglm)[,1], x = fitted(model1.vglm)[,1]), lwd = 4, col = "brown")
+abline(h=0)
+```
+```{r}
+plot(fitted(model1.vglm)[,2],resid(model1.vglm)[,2],main=colnames(resid(model1.vglm))[2])
+lines(lowess(y = resid(model1.vglm)[,2], x = fitted(model1.vglm)[,2]), lwd = 4, col = "brown")
+abline(h=0)
+```
+```{r}
+plot(fitted(model1.vglm)[,3],resid(model1.vglm)[,3],main=colnames(resid(model1.vglm))[3])
+lines(lowess(y = resid(model1.vglm)[,3], x = fitted(model1.vglm)[,3]), lwd = 4, col = "brown")
+abline(h=0)
+```
+```{r}
+plot(fitted(model1.vglm)[,4],resid(model1.vglm)[,4],main=colnames(resid(model1.vglm))[4])
+lines(lowess(y = resid(model1.vglm)[,4], x = fitted(model1.vglm)[,4]), lwd = 4, col = "brown")
+abline(h=0)
+```
+
 ## Coefficients spécifiques à chaque point de coupure des catégories
 ```{r}
 library(VGAM)
-model1c.vglm <- vglm(y4 ~ age + trt,family=cumulative,data=ds)
+model1c.vglm <- vglm(y4 ~ age + trt,family=cumulative(reverse=T),data=ds)
 summary(model1c.vglm)
 ```
 ### Vérification de l'hypothèse de cotes proportionnelles

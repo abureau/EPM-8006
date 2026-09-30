@@ -34,12 +34,15 @@ summary(fit)
 
 ```{r}
 plot(fitted(fit,outcome=F)[,1],resid(fit,outcome=F)[,1],main=paste0("Y = ",levels(chp05$Y)[1]),ylim=c(-0.9,0.9))
+abline(h=0)
 ```
 ```{r}
 plot(fitted(fit,outcome=F)[,2],resid(fit,outcome=F)[,2],main=paste0("Y = ",levels(chp05$Y)[2]),ylim=c(-0.9,0.9))
+abline(h=0)
 ```
 ```{r}
 plot(fitted(fit,outcome=F)[,3],resid(fit,outcome=F)[,3],main=paste0("Y = ",levels(chp05$Y)[3]),ylim=c(-0.9,0.9))
+abline(h=0)
 ```
 ## Avec la fonction multinom
 ```{r}
@@ -137,7 +140,7 @@ summary(fit.marginal)
 ```
 ```{r}
 sum.fitEE=summary(fit.marginal)
-round(data.frame(RP = exp(sum.fitEE$coef[-1,1]),
+round(data.frame(RC = exp(sum.fitEE$coef[-1,1]),
 LL = exp(sum.fitEE$coef[-1,1] -
          1.96*sum.fitEE$coef[-1,2]),
 UL = exp(sum.fitEE$coef[-1,1] +
