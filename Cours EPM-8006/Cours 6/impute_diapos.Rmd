@@ -66,6 +66,11 @@ Les variables sans méthode d'imputation n'ont pas de valeur manquante.
 ```{r}
 imp
 ```
+# Trace de la consommation d'alcool dans les itérations de MICE
+```{r}
+plot(imp,layout = c(2,1))
+```
+
 # Analyse des jeux de données imputés
 On modélise la cote de fracture de la hanche (OSQ010A). Faire afficher l'objet produit donne les resultats individuels sur chaque imputation
 ```{r}
