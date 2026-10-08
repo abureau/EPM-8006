@@ -11,7 +11,7 @@ ectopic = read.csv("ectopic_donnees.csv",na.strings=".")
 ```
 ou
 ```{r}
-ectopic = read.csv(file.choose(),na.strings=".")
+#ectopic = read.csv(file.choose(),na.strings=".")
 ```
 
 Noms des variables
@@ -42,7 +42,7 @@ logistic.display(model1.indic,decimal=3)
 ```
 ## Modèle brut de chlamydia et gonorrhée 
 ```{r}
-model2.indic = glm(pregnancy~gonnorhoea+chlamydia,data=ectopic.indic,family=binomial)
+model2.indic = glm(pregnancy~gonnorhoea+r + r:chlamydia,data=ectopic.indic,family=binomial)
 summary(model2.indic)
 ```
 Affichage des rapports de cote avec intervalles de confiance de Wald et tests d'hypothèses
