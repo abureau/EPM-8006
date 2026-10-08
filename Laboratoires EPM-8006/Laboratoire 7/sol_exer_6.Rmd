@@ -1,15 +1,18 @@
 ---
 title: "Solution exercice 6"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-#Importation des données
+# Importation des données
 
 ```{r}
-fram1 = read.csv(file.choose())
+#fram1 = read.csv(file.choose())
+fram1 = read.csv("/Users/alexandrebureau/Documents/MonTravail/cours/Concepts avancés en modélisation statistique/Données/fram1.csv");
 ```
 
-##Définition de moyennes et variances a priori des coefficients
+## Définition de moyennes et variances a priori des coefficients
 Ici il faut donner aussi une moyenne et une variance pour l'ordonnée à l'origine (Intercept)
 ```{r}
 moy.priori = c(0,log(2),rep(0,4),0.1)
@@ -33,7 +36,8 @@ plot(reglogist,auto.layout = F)
 par(mfrow=c(2,2))
 autocorr.plot(reglogist,lag.max=20,auto.layout = F)
 ```
- les graphiques de trace commencent après le burn-in.
+
+Les graphiques de trace commencent après le burn-in.
 Sur les graphiques de trace, on ne constate aucune tendance particulière.
 Le paramètre de burn-in semble donc suffisant.
 

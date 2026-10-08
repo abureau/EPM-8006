@@ -18,7 +18,7 @@ et comme réponse OSQ010A (fracture de la hanche 1 = oui, 2 = non).
 
 Nous estimerons un effet conditionnel avec une approche bayésienne.
 
-#Importation des données
+# Importation des données
 
 Il faut préciser que les données manquantes sont codées par des "." avec l'option na.strings
 ```{r}
@@ -32,7 +32,7 @@ La fonction *MCMClogit* exige que la réponse soit codée 0/1.
 ```{r}
 osteo$hanche=ifelse(osteo$OSQ010A==1,1,0)
 ```
-##Définition de moyennes et variances a priori des coefficients
+## Définition de moyennes et variances a priori des coefficients
 ```{r}
 moy.priori = c(-log(4),-log(2),rep(0,16))
 moy.priori
