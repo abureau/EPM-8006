@@ -106,5 +106,5 @@ exp(cbind(stats.tab[2:3,"Mean"],stats.tab[2:3,"Mean"]-qnorm(0.975)*stats.tab[2:3
 Quantiles de la distribution a posteriori (préférable)
 ```{r}
 qtab = summary(hanche.bayesmod2b)$quantiles
-exp(cbind(stats.tab[2:3,"Mean"],qtab[2:3,"2.5%"],qtab[2:3,"97.5%"]))
+exp(cbind(qtab[2:3,"50%"],qtab[2:3,"2.5%"],qtab[2:3,"97.5%"]))
 ```

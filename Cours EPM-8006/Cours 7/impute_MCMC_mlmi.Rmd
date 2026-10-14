@@ -1,0 +1,128 @@
+---
+title: "Imputation multiple MCMC avec risque de fracture ostéoporotique"
+output:
+  html_document:
+    df_print: paged
+---
+# Importation des données
+
+Il faut préciser que les données manquantes sont codées par des "." avec l'option na.strings. Il est important de préciser que les variables sont de type numérique avec l'option colClasses = "numeric" pour éviter des problèmes lors de l'analyse avec la fonction *withinBetween*.
+```{r}
+osteo = read.csv("osteo5.csv",na.strings=".",colClasses = "numeric")
+```
+ou
+```{r}
+#osteo = read.csv(file.choose(),na.strings=".",colClasses = "numeric")
+```
+
+## Remplissage de valeurs manquantes de consommation d'alcool
+Il y a des valeurs manquantes de alq130 (nombre moyen de boissons alcoolisées par jour) pour des sujets qui ont répondu "non" à la question alq101 (a bu au moins 12 boissons alcoolisées au cours de l'année).
+Il ne s'agit pas de données manquantes structurelles, puisqu'on peut inférer que alq130 = 0 si alq101 = "non". Il y a aussi des incohérences avec alq101 = "non" et alq130 > 0. On remplit et corrige des valeurs de alq130 en supposant que alq101 est correct.
+```{r}
+osteo$ALQ130 = ifelse(osteo$ALQ101==2,0,osteo$ALQ130)
+```
+
+
+# Recodage de la variable consommation
+On va considérer consommation régulière ou variée vs jamais consommation régulière
+pour avoir une exposition binaire.
+```{r}
+osteo$cons = ifelse(osteo$cons_reg==1 | osteo$cons_var ==1,1,0)
+```
+Définition de la variable de fracture de la hanche.
+```{r}
+osteo$fracture = NA;
+osteo$fracture[osteo$OSQ010A == 1 ] = 1;
+osteo$fracture[osteo$OSQ010A == 2 ] = 0;
+osteo2 = osteo;
+```
+```{r}
+library(dplyr)
+# Conversion proposée par Github Copilot pour créer des variables indicatrices de groupe ethnique
+osteo2 <- osteo2 |>
+  mutate(
+    mex_am   = if_else(!is.na(RIDRETH1) & RIDRETH1 == 1, 1, 0),
+    aut_hisp = if_else(!is.na(RIDRETH1) & RIDRETH1 == 2, 1, 0),
+    blanc_nh = if_else(!is.na(RIDRETH1) & RIDRETH1 == 3, 1, 0),
+    noir_nh  = if_else(!is.na(RIDRETH1) & RIDRETH1 == 4, 1, 0)
+  )
+osteo3 = osteo2[, c("OSQ130", "OSQ170", "OSQ200", "RIAGENDR", "mex_am", "aut_hisp", "blanc_nh", "noir_nh", "RIDAGEYR","BMXBMI", "WHD020", "WHD110", "ALQ101", "ALQ130", "DBQ229", "fracture","cons")]
+```
+
+```{r}
+library(VIM)
+par(cex=0.8)
+aggr(osteo3)
+```
+Proportion d'observations complètes et avec données manquantes
+```{r}
+prop.table(table(complete.cases(osteo3)))
+```
+# Exécution de l'imputation multiple par MCMC
+```{r}
+library(mlmi)
+imp=normImp(osteo3,M=20,pd=T,rseed=98)
+```
+Affichage des valeurs imputées pour le premier jeu de données
+
+```{r}
+imp[[1]]
+```
+# Analyse des jeux de données imputés
+On modélise la cote de fracture de la hanche (OSQ010A). Faire afficher l'objet produit donne les resultats individuels sur chaque imputation
+```{r}
+fctanalyse = function(inputData) 
+  {
+  frac=inputData$fracture;
+  inputData$fracture = ifelse(frac<0,0,ifelse(frac>1,1,frac));
+  obj=glm(fracture~cons+OSQ130+OSQ170+OSQ200 +BMXBMI +WHD020 +WHD110 +ALQ101 +ALQ130+RIAGENDR+RIDAGEYR+mex_am+aut_hisp+blanc_nh+noir_nh,data=inputData,family=binomial())
+  list(est=coef(obj),var=vcov(obj))
+  }
+```
+```{r}
+test = fctanalyse(imp[[1]])
+```
+
+## Exécute l'analyse et combine les résultats
+```{r}
+osteo.mi.logis = withinBetween(imp,analysisFun =fctanalyse)
+osteo.mi.logis 
+```
+
+
+Il faut programmer soi-même l'affichage des estimations de rapports de cote et leur intervalle de confiance.
+```{r}
+osteo.mi.logis$std.error = sqrt(diag(osteo.mi.logis$var))
+RC = signif(exp(cbind(osteo.mi.logis$est,osteo.mi.logis$est-qnorm(0.975)*osteo.mi.logis$std.error,osteo.mi.logis$est+qnorm(0.975)*osteo.mi.logis$std.error)),3)
+dimnames(RC)[[1]] = names(test$est)
+RC
+```
+En somme, on observe une association légèrement protectrice avec la consommation de lait (ligne 2) et les donnees sont compatibles avec des associations allant de modérément protectrices a légèrement délétères..
+
+# Analyse des jeux de données imputés - modèle log-linéaire semi-paramétrique
+
+```{r}
+require(geepack)
+fctanalyse.logbin = function(inputData) 
+  {
+  frac=inputData$fracture;
+  inputData$fracture = ifelse(frac<0,0,ifelse(frac>1,1,frac));
+  obj=geeglm(fracture~cons+OSQ130+OSQ170+OSQ200 +BMXBMI +WHD020 +WHD110 +ALQ101 +ALQ130+RIAGENDR+RIDAGEYR+mex_am+aut_hisp+blanc_nh+noir_nh,data=inputData,family=poisson(link="log"),id=1:nrow(inputData),corstr="independence")
+  list(est=coef(obj),var=vcov(obj))
+  }
+```
+```{r}
+test = fctanalyse.logbin(imp[[1]])
+```
+## Exécute l'analyse et combine les résultats
+```{r}
+osteo.mi.logbin = withinBetween(imp,analysisFun =fctanalyse.logbin)
+osteo.mi.logbin 
+```
+Il faut programmer soi-même l'affichage des estimations de rapports de prévalence et leur intervalle de confiance.
+```{r}
+osteo.mi.logbin$std.error = sqrt(diag(osteo.mi.logbin$var))
+RP = signif(exp(cbind(osteo.mi.logbin$est,osteo.mi.logbin$est-qnorm(0.975)*osteo.mi.logbin$std.error,osteo.mi.logbin$est+qnorm(0.975)*osteo.mi.logbin$std.error)),3)
+dimnames(RP)[[1]] = names(test$est)
+RP
+```
