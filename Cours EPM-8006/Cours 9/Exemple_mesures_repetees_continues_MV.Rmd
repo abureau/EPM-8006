@@ -23,7 +23,7 @@ Count0 = seizure$Counts[seizure$Visit == 0];
 ids = seizure$ID[seizure$Visit == 0];
 baseline = data.frame(ID = ids, Counts0 = Count0);
 seizure2 = merge(seizure, baseline, by = "ID");
-seizure2 = seizure2[seizure2$Visit!=0,]
+seizure3 = seizure2[seizure2$Visit!=0,]
 head(seizure2);
 ```
 # Analyse du modèle 1 
@@ -32,14 +32,14 @@ On utilise la fonction *gls*.
 Modèle de corrélation auto-régressif pour les erreurs
 ```{r}
 library(nlme)
-modGLS.ar1 = gls(Counts ~ TX + Visit + TX:Visit, data = seizure2, subset = Visit != 0, corr = corAR1(,form=~Visit|ID));
+modGLS.ar1 = gls(Counts ~ TX + Visit + TX:Visit + Counts0, data = seizure2, subset = Visit != 0, corr = corAR1(,form=~Visit|ID));
 summary(modGLS.ar1);
 ```
 
 Modèle de corrélation échangeable pour les erreurs (Compound Symmetry en anglais)
 ```{r}
 library(nlme)
-modGLS.ech = gls(Counts ~ TX + Visit + TX:Visit, data = seizure2, subset = Visit != 0, corr = corCompSymm(,form=~1|ID))
+modGLS.ech = gls(Counts ~ TX + Visit + TX:Visit + Counts0, data = seizure2, subset = Visit != 0, corr = corCompSymm(,form=~1|ID))
 modGLS.ech
 ```
 ```{r}
@@ -49,7 +49,7 @@ summary(modGLS.ech)
 # Analyse du modèle 2 
 avec la fonction *lme*
 ```{r}
-modLME.intercept = lme(Counts ~ TX + Visit + TX:Visit, random=~1|ID, data = seizure2, subset = Visit != 0);
+modLME.intercept = lme(Counts ~ TX + Visit + TX:Visit + Counts0, random=~1|ID, data = seizure2, subset = Visit != 0);
 summary(modLME.intercept);
 ```
 On affiche les variances et calcule la corrélation
@@ -66,7 +66,7 @@ Remarquez que ce que *lmer* appelle "REML criterion" est -2 x log-vraisemblance.
 La function *summary* affiche les variances-covariances, mais je ne connais pas de moyen de les extraire.
 ```{r}
 library(lme4)
-modLMER.intercept = lmer(Counts ~ TX + Visit + TX:Visit + (1|ID), data = seizure2, subset = Visit != 0);
+modLMER.intercept = lmer(Counts ~ TX + Visit + TX:Visit + Counts0 + (1|ID), data = seizure2, subset = Visit != 0);
 summary(modLMER.intercept);
 ```
 
@@ -94,12 +94,12 @@ for (i in 1:2) lines(1:4,modLMER.intercept.pred[4*i+1:4],lty=2)
 # Analyse du modèle 3 
 avec la fonction *lme*: Il faut changer la fonction d'optimisation pour "optim" pour que la maximisation de la vraisemblance restreinte converge (mais n'atteint pas le maximum global).
 ```{r}
-modLME.pente = lme(Counts ~ TX + Visit + TX:Visit, random=~Visit|ID, data = seizure2, subset = Visit != 0,control=list(opt="optim"));
+modLME.pente = lme(Counts ~ TX + Visit + TX:Visit + Counts0, random=~Visit|ID, data = seizure2, subset = Visit != 0,control=list(opt="optim"));
 summary(modLME.pente);
 ```
 Avec la fonction *lmer*
 ```{r}
-modLMER.pente = lmer(Counts ~ TX + Visit + TX:Visit + (Visit|ID), data = seizure2, subset = Visit != 0);
+modLMER.pente = lmer(Counts ~ TX + Visit + TX:Visit + (Visit|ID) + Counts0, data = seizure2, subset = Visit != 0);
 summary(modLMER.pente);
 ```
 Prédictions individuelles avec *lmer*
@@ -115,11 +115,7 @@ for (i in 1:2) lines(1:4,modLMER.pente.pred[4*i+1:4],lty=2)
 
 # Résidus
 
-La fonction *plot* produit un graphique des résidus standardisés vs. les valeurs prédites, que ce soit sur un objet produit par *lme* ou *lmer*. Avec un objet produit par *lme* ou *gls*, on peut obtenir les résidus transformés, appelés "normalized", seulement si on spécifie une structure de corrélation. S'il y a seulement des effets aléatoires, les résidus transformés égalent les résidus standardisés.
-```{r}
-plot(modLME.intercept)
-plot(modLME.intercept,resid(.,type="normalized")~fitted(.),abline=0)
-```
+La fonction *plot* produit un graphique des résidus standardisés vs. les valeurs prédites, que ce soit sur un objet produit par *lme* ou *lmer*. Avec un objet produit par *lme* ou *gls*, on peut obtenir les résidus transformés, appelés "normalized", seulement si on spécifie une structure de corrélation. 
 
 On voit une différence s'il y a une structure de corrélation spécifiée
 ```{r}
@@ -130,6 +126,79 @@ plot(modGLS.ar1,resid(.,type="normalized")~fitted(.),abline=0)
 plot(modGLS.ech)
 plot(modGLS.ech,resid(.,type="normalized")~fitted(.),abline=0)
 ```
+S'il y a seulement des effets aléatoires, les résidus transformés égalent les résidus standardisés.
+```{r}
+plot(modLME.intercept)
+plot(modLME.intercept,resid(.,type="normalized")~fitted(.),abline=0)
+```
+## Code pour calculer les résidus transformés et valeurs prédites transformées à partir d'un objet produit par *lme*
+
+Matrices et variance requises pour calculer les résidus transformés
+```{r}
+Z   <- model.matrix(~ 1, data = seizure3)
+G <- getVarCov(modLME.intercept, type = "random.effects")
+s2 <- modLME.intercept$sigma^2
+```
+
+Numéros de lignes de chaque sujet
+```{r}
+idx <- split(seq_len(nrow(seizure3)), seizure3$ID)           
+```
+
+Fonction pour calculer V_i = Z_i G Z_i' + sigma^2 I
+```{r}
+varmarg <- function(i) {
+  Zi <- Z[i, , drop = FALSE]
+  Zi %*% G %*% t(Zi) + s2 * diag(length(i))
+}
+```
+
+Extraction des résidus bruts et des valeurs prédites
+```{r}
+pred = as.numeric(fitted(modLME.intercept, level = 0))
+# 2 façons d'obtenir les résidus bruts: soit en soustrayant les valeurs prédites de la réponse, soit avec la fonction *resid*.
+#resid.bruts = seizure3$Counts - pred
+resid.bruts = resid(modLME.intercept, level=0, type="response")
+```
+
+Vérification que les résidus bruts sont les mêmes que ceux produits par la fonction *resid* appliquée à un objet produit par *gls*.
+```{r}
+resid.bruts.gls = resid(modGLS.ech,type="response")
+head(cbind(resid.bruts,resid.bruts.gls))
+```
+
+Boucle sur les individus pour calculer la réponse transformée, les résidus transformés et les valeurs prédites transformées
+```{r}
+scaleddep   <- numeric(nrow(seizure3))
+scaledresid <- numeric(nrow(seizure3))
+predt       <- numeric(nrow(seizure3))
+for (i in idx) {
+  Vi <- varmarg(i)
+  
+  # Résidus transformés : L^{-1} r, avec V = L L' (L triangulaire inférieure)
+  L <- t(chol(Vi))
+  scaleddep[i]   <- forwardsolve(L, seizure3$Counts[i])
+  scaledresid[i] <- forwardsolve(L, resid.bruts[i])
+  predt[i] <- forwardsolve(L, pred[i])
+}
+```
+
+Ls résidus transformés ne sont pas égaux aux résidus normalisés de la fonction *gls*. Selon Claude Sonnet 5.5, la transformation appliquée par la fonction *gls* est différente de celle que nous avons appliquée mais produit néanmoins des résidus décorrélés. Toute une famille de rotations des résidus a cette propriété.
+
+```{r}
+plot(resid(modGLS.ech,type="normalized"),scaledresid)
+```
+
+
+```{r}
+plot(pred,scaledresid)
+abline(h=0)
+```
+```{r}
+plot(predt,scaledresid)
+abline(h=0)
+```
+
 
 ## Diagnostics d'influence
 ```{r}
@@ -146,8 +215,8 @@ cbind(seizure2,abs(dfb.mat[,2]))[abs(dfb.mat[,2])>0.2,]
 
 Pour les tests du rapport de vraisemblance (RV), il faut estimer les modèles par maximum de vraisemblance. Testons le terme d'interaction TX x Visit. Avec la fonction *lme*:
 ```{r}
-modLME.intercept.MV = lme(Counts ~ TX + Visit + TX*Visit, random=~1|ID, data = seizure2, subset = Visit != 0,method="ML")
-modLME.sansinteract.MV = lme(Counts ~ TX + Visit, random=~1|ID, data = seizure2, subset = Visit != 0,method="ML")
+modLME.intercept.MV = lme(Counts ~ TX + Visit + TX*Visit + Counts0, random=~1|ID, data = seizure2, subset = Visit != 0,method="ML")
+modLME.sansinteract.MV = lme(Counts ~ TX + Visit + Counts0, random=~1|ID, data = seizure2, subset = Visit != 0,method="ML")
 ```
 On effectue le test du RV avec la fonction *anova*:
 
@@ -158,36 +227,36 @@ anova(modLME.intercept.MV,modLME.sansinteract.MV)
 Avec la fonction *lmer*, on effectue aussi le test du RV avec la fonction *anova*. Si on passe des modèles estimés par le maximum de la vraisemblance restreinte, la fonction *lmer* ne s'en servira pas, mais les réestimera plutôt par maximum de vraisemblance standard pour que le test soit valide. Cette protection contre un test invalide est un avantage important de la fonction *lmer* sur la fonction *lme* et la procédure mixed de SAS.  
 
 ```{r}
-modLMER.sansinteract = lmer(Counts ~ TX + Visit + (1|ID), data = seizure2, subset = Visit != 0)
+modLMER.sansinteract = lmer(Counts ~ TX + Visit + Counts0 + (1|ID), data = seizure2, subset = Visit != 0)
 anova(modLMER.intercept,modLMER.sansinteract)
 ```
 
 # Intervalles de confiance sur les effets fixes
 
-On utilise la fonction *intervals* sur un objet *lme*. Cette fonction calcule seulement les intervalles de Wald asymptotiques basés sur la loi normale. Nous l'illustrons sur le modèle 2.
+On utilise la fonction *intervals* sur un objet *lme*. Cette fonction calcule seulement les intervalles de Wald asymptotiques basés sur la loi normale. Nous l'illustrons sur le modèle 3.
 ```{r}
-intervals(modLME.intercept,which="fixed")
+intervals(modLME.pente,which="fixed")
 ```
 On utilise la fonction *confint* sur un objet *lmer*. Par défaut, on obtient les intervalles de la vraisemblance de profile (basés sur le RV). Pour les coefficients représentant les effets fixes du modèle, il faut alors estimer le modèle par maximum de vraisemblance pour que les intervalles soient valides. Avec la fonction *lmer*, spécifier *REML=FALSE* implique que le critère du maximum de vraisemblance sera utilisé. 
 ```{r}
-modLMER.intercept.MV = lmer(Counts ~ TX + Visit + TX*Visit + (1|ID), data = seizure2, subset = Visit != 0,REML=FALSE)
-modLMER.intercept.MV
-confint(modLMER.intercept.MV,parm="beta_")
+modLMER.pente.MV = lmer(Counts ~ TX + Visit + TX*Visit + Counts0 + (Visit|ID), data = seizure2, subset = Visit != 0,REML=FALSE)
+modLMER.pente.MV
+confint(modLMER.pente.MV,parm="beta_")
 ```
 Dans ce cas particulier avec un devis équilibré, les estimations des coefficients par MV et par MVR sont identiques, et appliquer la fonction *confint* à l'objet du modèle estimé par MVR ou par MV donne les mêmes intervalles. Ce ne sera pas toujours le cas.
 ```{r}
-confint(modLMER.intercept,parm="beta_")
+confint(modLMER.pente,parm="beta_")
 ```
 
 On peut aussi obtenir les intervalles de Wald basés sur la distribution de Student.
 ```{r}
-confint(modLMER.intercept,method="Wald")
+confint(modLMER.pente,method="Wald")
 ```
 
 
 # Intervalles de confiance pour les paramètres de variance
 
-Seule l'approche de la vraisemblance de profil est recommandée. On peut calculer les intervalles pour les estimations par MVR (REML) qui sont sans biais. Seule la fonction *confint* appliquée aux objets *lmer* permet ce calcul.
+Seule l'approche de la vraisemblance de profil est recommandée. On peut  calculer les intervalles pour les estimations par MVR (REML) qui sont sans biais. Seule la fonction *confint* appliquée aux objets *lmer* permet ce calcul. Nous l'illustrons sur le modèle 2.
 
 ```{r}
 confint(modLMER.intercept,parm="theta_")
