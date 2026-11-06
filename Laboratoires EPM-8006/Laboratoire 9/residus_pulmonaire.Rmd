@@ -1,7 +1,9 @@
 ---
-title: "Examen des résidus du modèle de la croissance de capacité
-   pulmonaire de la Six Cities Study of Air Pollution and Health"
-output: html_notebook
+title: Examen des résidus du modèle de la croissance de capacité pulmonaire de la
+  Six Cities Study of Air Pollution and Health
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Lecture des données
@@ -27,7 +29,7 @@ cov.t = function(t,u=0,sigma0,sigma01,sigma1,sigmae,cor=F)
   varu = sigma0 + 2*sigma01*u + sigma1*u^2 + sigmae
   vart = sigma0 + 2*sigma01*t + sigma1*t^2 + sigmae
   covt = sigma0 + sigma01*(t+u) + sigma1*t*u
-  if (cor==T) ifelse (t==u,1,covt/varu)
+  if (cor==T) ifelse (t==u,1,covt/sqrt(varu*vart))
   else ifelse (t==u,varu,covt)
 }
 ```
@@ -47,38 +49,148 @@ Matrice de corrélation pour le sujet 35
 round(outer(age35,age35,cov.t,sigma0=sigma0,sigma01=sigma01,sigma1=sigma1,sigmae=sigmae,cor=T),4)
 ```
 
+# Calcul des résidus normalisés
+Code adapté du script modeles_mixtes_residus.R qui est une traduction en R du script modeles_mixtes_residus.sas par Claude Sonnet 5.5. 
 
-## Graphique des résidus en fonction des valeurs prédites
+Matrices et variance requises pour calculer les résidus transformés
+```{r}
+X   <- model.matrix(~ age+loght+baseage+logbht, data = fev)   
+Z   <- model.matrix(~ age, data = fev)   
+G <- getVarCov(fev.estim1, type = "random.effects")
+s2 <- fev.estim1$sigma^2
+
+# V_i = Z_i G Z_i' + sigma^2 I
+varmarg <- function(i) {
+  Zi <- Z[i, , drop = FALSE]
+  Zi %*% G %*% t(Zi) + s2 * diag(length(i))
+}
+```
+
+```{r}
+idx <- split(seq_len(nrow(fev)), fev$id)           # lignes de chaque sujet
+```
+
+On reproduit avec la fonction *varmarg* les matrices de covariance et de corrélation pour le sujet 35 générées par la fonction *cov.t* 
+```{r}
+V35 <- varmarg(idx[[35]])
+round(V35,5)
+round(cov2cor(V35),4)
+```
+Génération des résidus bruts et des valeurs prédites
+```{r}
+beta <- fixef(fev.estim1)
+
+# Moyenne prédite (marginale) et résidus bruts marginaux
+fev$pred  <- as.numeric(X %*% beta)
+fev$resid <- fev$logfev1 - fev$pred
+# On peut aussi obtenir les valeurs prédites des effets fixes seuls avec 
+# fitted(fev.estim1, level = 0). On vérifie qu'on obtient la même solution.
+all.equal(fev$pred, as.numeric(fitted(fev.estim1, level = 0)),
+                           check.attributes = FALSE)
+```
+
+Matrice X' V^{-1} X, pour la variance des résidus bruts
+```{r}
+A <- Reduce(`+`, lapply(idx, function(i) {
+  Xi <- X[i, , drop = FALSE]
+  t(Xi) %*% solve(varmarg(i), Xi)
+}))
+Ainv <- solve(A)
+```
+
+Boucle sur les individus pour calculer la réponse transformée, les résidus studentisés et transformés et les valeurs prédites transformées
+
+```{r}
+fev$student     <- NA_real_  # résidus "studentisés"
+fev$scaleddep   <- NA_real_  # réponse transformée
+fev$scaledresid <- NA_real_  # résidus transformés
+fev$predt       <- NA_real_  # valeurs prédites transformées
+
+for (i in idx) {
+  Xi <- X[i, , drop = FALSE]
+  Vi <- varmarg(i)
+  
+  # Résidus studentisés : r / sqrt(Var(r)), Var(r) = V - X (X'V^-1 X)^-1 X'
+  vr <- diag(Vi - Xi %*% Ainv %*% t(Xi))
+  fev$student[i] <- fev$resid[i] / sqrt(vr)
+  
+  # Résidus transformés : L^{-1} r, avec V = L L' (L triangulaire inférieure)
+  L <- t(chol(Vi))
+  fev$scaleddep[i]   <- forwardsolve(L, fev$logfev1[i])
+  fev$scaledresid[i] <- forwardsolve(L, fev$resid[i])
+  fev$predt[i] <- forwardsolve(L, fev$pred[i])
+}
+
+# Moyenne prédite transformée = réponse transformée - résidus transformés
+all.equal(fev$predt, fev$scaleddep - fev$scaledresid)
+
+```
+
+
+## Graphique des résidus standardisés en fonction des valeurs prédites
 ```{r}
 plot(fev.estim1)
 ```
-Pas possible d'avoir des résidus normalisés pour un modèle avec effet aléatoire (on obtient encore les résidus standardisés).
+Incluant une courbe de lissage.
 ```{r}
-plot(fev.estim1,resid(.,type="normalized")~fitted(.),abline=0)
+scatter.smooth(fitted(fev.estim1),resid(fev.estim1,type="pearson"),col="red")
+abline(h=0,lty=2)
 ```
 
-## Graphique quantile-quantile des résidus bruts
+
+## Graphique des résidus transformés en fonction des valeurs prédites transformées
+
+```{r}
+plot(fev$predt,fev$scaledresid)
+abline(h=0)
+```
+Incluant une courbe de lissage.
+```{r}
+scatter.smooth(fev$predt,fev$scaledresid,col="red")
+abline(h=0,lty=2)
+```
+
+## Graphique quantile-quantile des résidus standardisés
 ```{r}
 qqnorm(resid(fev.estim1,type="pearson"))
 abline(0,1)
 ```
-## Graphique des résidus en fonction des valeurs prédites
 
-Incluant une courbe de lissage.
+## Graphique quantile-quantile des résidus transformés
 ```{r}
-scatter.smooth(fitted(fev.estim1),resid(fev.estim1),col="red")
+qqnorm(fev$scaledresid)
+abline(0,1)
 ```
 
-## Graphique des résidus en fonction de l'âge
+
+## Graphique des résidus standardisés en fonction de l'âge
 
 Incluant une courbe de lissage.
 ```{r}
-scatter.smooth(fev$age,resid(fev.estim1),col="red")
+scatter.smooth(fev$age,resid(fev.estim1,type="pearson"),col="red")
+abline(h=0,lty=2)
 ```
 
-## Graphique des résidus en fonction du log de la taille
+## Graphique des résidus transformés en fonction de l'âge
 
 Incluant une courbe de lissage.
 ```{r}
-scatter.smooth(fev$loght,resid(fev.estim1),col="red")
+scatter.smooth(fev$age,fev$scaledresid,col="red")
+abline(h=0,lty=2)
+```
+
+## Graphique des résidus standardisés en fonction du log de la taille
+
+Incluant une courbe de lissage.
+```{r}
+scatter.smooth(fev$loght,resid(fev.estim1,type="pearson"),col="red")
+abline(h=0,lty=2)
+```
+
+## Graphique des résidus transformés en fonction du log de la taille
+
+Incluant une courbe de lissage.
+```{r}
+scatter.smooth(fev$loght,fev$scaledresid,col="red")
+abline(h=0,lty=2)
 ```
