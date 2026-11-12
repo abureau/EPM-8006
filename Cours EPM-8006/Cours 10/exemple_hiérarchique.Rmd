@@ -1,6 +1,8 @@
 ---
 title: "Modèle hiérarchique"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Lecture des données
@@ -39,13 +41,22 @@ La fonction *lme* exige les mêmes effets aléatoires à tous les niveaux (l'ord
 
 ```{r}
 library(lme4)
-melaLME.UVB = lmer(RR~UVB + (1|region)+(UVB|nation),data=mmec)
-summary(melaLME.UVB)
+#melaLMER.UVB = lmer(RR~UVB + (1|region)+(1+UVB|nation),data=mmec)
+melaLMER.UVB = lmer(RR~UVB + (1|region)+(UVB|nation),data=mmec)
+summary(melaLMER.UVB)
 ```
+```{r}
+IC.UVB = confint(melaLMER.UVB,parm="theta_")
+IC.UVB
+```
+```{r}
+IC.UVB[-3,]^2
+```
+
 Pour tester l'hypothèse nulle que la pente des UVB ne varie pas d'un pays à l'autre, on estime un modèle sans l'effet aléatoire sur la pente des UVB et on fait un test du rapport de vraisemblance. Comme on compare des modèles qui ne diffèrent que dans le modèle de variance-covariance, il est approprié de les comparer selon le critère du MVR. Il faut alors spécifier l'option *refit=F* car par défaut *anova* réestime les modèles par MV standard.
 ```{r}
-melaLME.UVB0 = lmer(RR~UVB + (1|region)+(1|nation),data=mmec)
-anova(melaLME.UVB0,melaLME.UVB,refit=F)
+melaLMER.UVB0 = lmer(RR~UVB + (1|nation/region),data=mmec)
+anova(melaLMER.UVB0,melaLMER.UVB,refit=F)
 ```
 La distribution du khi-carré à 2 degrés de libertés n'est pas appropriée parce que l'alternative pour le paramètre de variance de la pente est unilatérale (>0). La distribution correcte est un mélange de khi-carrés à 1 et 2 degrés de liberté.
 ```{r}
@@ -68,9 +79,57 @@ legend(-4,1,c("Pente aléatoire","autorégressif d'ordre 1"),lty=1,col=c("black"
 ```
 
 
-À ma connaissance, dans R il est seulement possible de produire les résidus bruts ou standardisés des modèles mixtes.
+Graphique des résidus standardisés des modèles mixtes.
 ```{r}
-plot(melaLME.UVB)
+plot(melaLMER.UVB)
 ```
 
+Matrices et variance requises pour calculer les résidus transformés
+```{r}
+#G <- matrix(c(0.013045,0,0,0,0.154982,covg,0,covg,0.005107),nrow=3)
+Z <- getME(melaLMER.UVB,"Z")
+Lambdat <- getME(melaLMER.UVB,"Lambdat")
+s2 <- sigma(melaLMER.UVB)^2
+G <- s2 * crossprod(Lambdat)
+V <- s2 * (crossprod(Lambdat %*% t(Z)) + Diagonal(nrow(Z)))
+```
 
+```{r}
+idx <- split(seq_len(nrow(mmec)), mmec$nation)           
+```
+
+```{r}
+V[idx[[1]],idx[[1]]]   
+```
+```{r}
+G[1:4,1:4]
+G[93:96,93:96]
+```
+
+Extraction des résidus bruts et des valeurs prédites
+```{r}
+pred = fitted(melaLMER.UVB)
+# 2 façons d'obtenir les résidus bruts: soit en soustrayant les valeurs prédites de la réponse, soit avec la fonction *resid*.
+#resid.bruts0 = mmec$RR - pred
+resid.bruts = resid(melaLMER.UVB, type="response")
+```
+
+Boucle sur les individus pour calculer la réponse transformée, les résidus transformés et les valeurs prédites transformées
+```{r}
+scaleddep   <- numeric(nrow(mmec))
+scaledresid <- numeric(nrow(mmec))
+predt       <- numeric(nrow(mmec))
+for (i in idx) {
+  Vi <- V[i,i]
+  
+  # Résidus transformés : L^{-1} r, avec V = L L' (L triangulaire inférieure)
+  L <- t(chol(Vi))
+  scaleddep[i]   <- forwardsolve(L, mmec$RR[i])
+  scaledresid[i] <- forwardsolve(L, resid.bruts[i])
+  predt[i] <- forwardsolve(L, pred[i])
+}
+```
+```{r}
+plot(predt,scaledresid)
+abline(h=0)
+```
