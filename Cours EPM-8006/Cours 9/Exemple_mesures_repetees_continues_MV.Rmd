@@ -70,6 +70,18 @@ modLMER.intercept = lmer(Counts ~ TX + Visit + TX:Visit + Counts0 + (1|ID), data
 summary(modLMER.intercept);
 ```
 
+Obtention de la matrice de variance-covariance marginale V = Z G Z' + sigma^2 I. La fonction *getME* permet d'extraire les matrices Z et Lambdat (la racine carrée de G) pour calculer V. On peut aussi extraire la variance résiduelle avec la fonction *sigma*.
+```{r}
+Z = getME(modLMER.intercept,"Z")
+Lambdat = getME(modLMER.intercept,"Lambdat")
+s2 <- sigma(modLMER.intercept)^2
+V <- s2 * (crossprod(Lambdat %*% t(Z)) + Diagonal(nrow(Z)))
+```
+
+```{r}
+V[1:8,1:8]
+```
+
 Prédictions individuelles avec *lme*
 ```{r}
 modLME.intercept.pred = predict(modLME.intercept)
@@ -101,6 +113,21 @@ Avec la fonction *lmer*
 ```{r}
 modLMER.pente = lmer(Counts ~ TX + Visit + TX:Visit + (Visit|ID) + Counts0, data = seizure2, subset = Visit != 0);
 summary(modLMER.pente);
+```
+Obtention de la matrice de variance-covariance marginale V = Z G Z' + sigma^2 I. La fonction *getME* permet d'extraire les matrices Z et Lambdat (la racine carrée de G) pour calculer V et G. On peut aussi extraire la variance résiduelle avec la fonction *sigma*.
+```{r}
+Z = getME(modLMER.pente,"Z")
+Lambdat = getME(modLMER.pente,"Lambdat")
+s2 <- sigma(modLMER.pente)^2
+V <- s2 * (crossprod(Lambdat %*% t(Z)) + Diagonal(nrow(Z)))
+```
+```{r}
+V[1:8,1:8]
+```
+
+```{r}
+G <- s2 * crossprod(Lambdat)
+G[1:4,1:4]
 ```
 Prédictions individuelles avec *lmer*
 ```{r}
@@ -183,10 +210,28 @@ for (i in idx) {
 }
 ```
 
+Alternative avec *getVarCov(modLME.intercept, type = "marginal", individuals = index)* pour obtenir *V_i*.
+```{r}
+scaleddep   <- numeric(nrow(seizure3))
+scaledresid <- numeric(nrow(seizure3))
+predt       <- numeric(nrow(seizure3))
+for (index in 1:length(idx)) {
+
+  Vi <- getVarCov(modLME.intercept, type = "marginal", individuals = index)[[1]]
+  
+  # Résidus transformés : L^{-1} r, avec V = L L' (L triangulaire inférieure)
+  L <- t(chol(Vi))
+  i = idx[[index]]
+  scaleddep[i]   <- forwardsolve(L, seizure3$Counts[i])
+  scaledresid[i] <- forwardsolve(L, resid.bruts[i])
+  predt[i] <- forwardsolve(L, pred[i])
+}
+```
 Ls résidus transformés ne sont pas égaux aux résidus normalisés de la fonction *gls*. Selon Claude Sonnet 5.5, la transformation appliquée par la fonction *gls* est différente de celle que nous avons appliquée mais produit néanmoins des résidus décorrélés. Toute une famille de rotations des résidus a cette propriété.
 
 ```{r}
 plot(resid(modGLS.ech,type="normalized"),scaledresid)
+abline(0,1)
 ```
 
 
