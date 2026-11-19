@@ -11,6 +11,18 @@ amenorrhea = read.table("amenorrhea.dat",na.strings = ".")
 names(amenorrhea) = c("ID","dose","temps","y")
 head(amenorrhea)
 ```
+# Analyse des données disponibles
+On peut seulement modéliser la dépendance par des corrélations
+```{r}
+library(geepack)
+amen_fit <- geeglm(y ~ dose + temps + I(temps^2) +
+                       dose:temps + dose:I(temps^2),scale.fix=T,
+                     data = amenorrhea, id = ID, waves = temps,
+                     family=binomial, corstr  = "unstructured")
+summary(amen_fit)
+```
+
+
 # Imputation multiple
 
 ## Transformation au format large
@@ -36,7 +48,6 @@ estime.mod = function(fm,ID,dose,y.1,y.2,y.3,y.4)
     values_to = "y")
   # On décale le temps de -1 pour ramener le temps initial à 0 comme Fitzmaurice, Laird et Ware. 
   amenimp$temps = as.numeric(amenimp$temps)-1
-  amenimp$temps2 = amenimp$temps^2
   geeglm(fm,data=amenimp,family=binomial,corstr="unstr",id=ID,scale.fix=T)
 }
 ```
@@ -44,11 +55,14 @@ estime.mod = function(fm,ID,dose,y.1,y.2,y.3,y.4)
 ### Analyse des données après imputation multiple (sous l'hypothèse MAR)
 ```{r}
 library(geepack)
-amen_multimod = with(amenlarge_imp,estime.mod(y~dose*temps+dose*temps2,ID,dose,y.1,y.2,y.3,y.4))
+amen_multimod = with(amenlarge_imp,estime.mod(y~dose*temps+dose*I(temps^2),ID,dose,y.1,y.2,y.3,y.4))
 ```
 ```{r}
 amen_combine = pool(amen_multimod)
 amen_combine
+```
+```{r}
+summary(amen_combine)
 ```
 
 # Pondération par la probabilité inverse de censure
