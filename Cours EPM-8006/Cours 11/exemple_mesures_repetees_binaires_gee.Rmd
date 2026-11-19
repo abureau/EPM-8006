@@ -18,10 +18,34 @@ resp$treatment = factor(resp$treatment,levels = c("P","A"))
 resp$visit=factor(resp$visit,levels = c(4,1,2,3))
 ```
 
+```{r}
+interaction.plot(resp$visit, 
+		    resp$treatment, 
+		    resp$dichot, type = "l", legend = F,
+		    xlab = "Visite",
+		    ylab = "Proportion bon statut respiratoire", ylim = c(0,1));
+legend(x = 1, y = 0.3, legend = c("P", "A"), lty = c(2,1),bty = "n", col = c("black", "black"));
+```
+```{r}
+library(dplyr)
+prop_dichot <- resp |>
+  group_by(visit, treatment) |>
+  summarise(n = n(), proportion = mean(dichot == 1, na.rm = TRUE), .groups = "drop")
+prop_dichot$logCote = log(prop_dichot$proportion/(1-prop_dichot$proportion))
+```
+```{r}
+interaction.plot(prop_dichot$visit, 
+		    prop_dichot$treatment, 
+		    prop_dichot$logCote, type = "l", legend = F,
+		    xlab = "Visite",
+		    ylab = "log-cote bon statut respiratoire", ylim = c(-0.5,1));
+legend(x = 1, y = 0.4, legend = c("P", "A"), lty = c(2,1),bty = "n", col = c("black", "black"));
+```
+
 Modèle logistique
 ```{r}
 library(geepack)
-respGEE = geeglm(dichot~visit*treatment+sex+age+baseline+center,id=id, corstr = "ar1",data=resp,family=binomial,scale.fix=T)
+respGEE = geeglm(dichot~visit*treatment+sex+age+baseline+center,id=id, corstr = "ar1",data=resp,family=binomial,scale.fix=T,waves=visit)
 summary(respGEE)
 ```
 Attention! La fonction *anova* effectue des tests d'analyse de variance de type 1. Seul le test du terme d'interaction correspond à un test de type 3, ajusté pour les autres termes du modèle.
@@ -56,7 +80,7 @@ lines(lowess(resp$baseline,rPearson))
 ```
 ## Données influentes
 
-Voici la fonction proposée par ChatGPT où j'ai corrigé une erreur et qui devrait fonctionner mais produit un message d'erreur d'objet non-trouvé.
+Voici la fonction proposée par ChatGPT (2025) et corriée par Claude Sonnet 5.5 et moi pour calculer des dfbetas pour un modèle GEE. Elle est basée sur la fonction *geeglm* du package *geepack*. La fonction calcule les dfbetas pour chaque observation en retirant l'observation et en refittant le modèle.
 ```{r}
 # Fonction pour calculer les dfbetas
 dfbetas_geeglm <- function(model, data,corstr) {
@@ -80,12 +104,14 @@ dfbetas_geeglm <- function(model, data,corstr) {
   for (i in 1:n) {
     # retirer l'observation i
     reduced_data <- data[-i, ]
+    # id évalué dans `data` par geeglm : on le stocke comme colonne
+    reduced_data$.id_tmp <- as.factor(reduced_data[[id_name]])
     
     # refit du modèle
     mod_i <- geeglm(
       formula = formula,
       family = family,
-      id = as.factor(reduced_data[[id_name]]),
+      id = .id_tmp,
       data = reduced_data,
       corstr = corstr,
       scale.fix=T
@@ -104,51 +130,7 @@ dfbetas_geeglm <- function(model, data,corstr) {
 Appel de la fonction qui échoue.
 ```{r}
 # Calcul des dfbetas
-# dfb <- dfbetas_geeglm(respGEE, resp,corstr="ar1")
-```
-L'exécution des instructions de la fonction fonctionne.
-```{r}
-  # Attribution des arguments
-  model = respGEE
-  data = resp
-  corstr="ar1"
-  
-  beta_full <- coef(model)
-  se_full   <- sqrt(diag(vcov(model)))
-  
-  n <- nrow(data)
-  p <- length(beta_full)
-  
-  dfbeta_mat <- matrix(NA, nrow = n, ncol = p)
-  colnames(dfbeta_mat) <- names(beta_full)
-  
-  # extraction des objets nécessaires
-  formula <- model$call$formula
-  family <- eval(model$call$family, environment(formula))
-  id_name <- as.character(model$call$id)
-
-  ids <- data[[id_name]]
-  
-  for (i in 1:n) {
-    # retirer l'observation i
-    reduced_data <- data[-i, ]
-    
-    # refit du modèle
-    mod_i <- geeglm(
-      formula = formula,
-      family = family,
-      id = as.factor(reduced_data[[id_name]]),
-      data = reduced_data,
-      corstr = corstr,
-      scale.fix=T
-    )
-    
-    beta_i <- coef(mod_i)
-    
-    # calcul dfbeta pour chaque coefficient
-    dfbeta_mat[i, ] <- (beta_full - beta_i) / se_full
-  }
-  
+dfb <- dfbetas_geeglm(respGEE, resp,corstr="ar1")
 ```
 
 Exemple d'affichage des dfbetas pour la variable traitement.
@@ -161,6 +143,6 @@ plot(1:nrow(dfb),dfb[,"treatmentA"])
 Modèle log-binomial.
 ```{r}
 library(geepack)
-respGEE.log = geeglm(dichot~factor(visit)*treatment+sex+age+baseline+center,id=id, corstr = "ar1",data=resp,family=poisson(link=log),scale.fix=T)
+respGEE.log = geeglm(dichot~factor(visit)*treatment+sex+age+baseline+center,id=id, corstr = "ar1",data=resp,family=poisson(link=log),scale.fix=T,waves=visit)
 summary(respGEE.log)
 ```
