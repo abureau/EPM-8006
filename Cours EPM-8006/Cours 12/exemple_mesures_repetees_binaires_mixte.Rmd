@@ -36,7 +36,7 @@ summary(tr)
 exp(confint(tr)$confint)
 ```
 
-On affiche les variances
+On affiche les composates de variances
 ```{r}
 vc = VarCorr(respGLMM)
 vc
@@ -44,7 +44,7 @@ vc
 ```{r}
 plot(respGLMM)
 rPearson = resid(respGLMM,type="pearson")
-pred = predict(respGLMM)
+pred = fitted(respGLMM)
 plot(pred,rPearson)
 abline(h=0)
 lines(lowess(pred,rPearson),col="blue")
@@ -55,6 +55,7 @@ plot(resp$age, rPearson,ylab="Résidus de Pearson")
 abline(h=0)
 lines(lowess(resp$age,rPearson),col="blue")
 ```
+
 ## Analyse avec effet aléatoire sur le sujet
 
 glmmPQL estime alors néanmoins une variance résiduelle. Cela diffère du comportement de PROC GLIMMIX de SAS quand on ne spécifie pas de variance résiduelle.
@@ -69,13 +70,13 @@ vc
 
 On peut aussi spécifier une structure de variance résiduelle en plus d'un effet aléatoire pour le sujet. Comme l'effet aléatoire sur le sujet capture une corrélation échangeable, il ne reste plus beaucoup de corrélation à expliquer par un terme autorégressif.
 ```{r}
-respGLMM = glmmPQL(dichot~v*treatment+sex+age+baseline,random=~1|center/id,corr = corAR1(,form=~visit|center/id),data=resp,family=binomial)
-summary(respGLMM)
+respGLMMid = glmmPQL(dichot~v*treatment+sex+age+baseline,random=~1|center/id,corr = corAR1(,form=~visit|center/id),data=resp,family=binomial)
+summary(respGLMMid)
 ```
 Effet du traitement
 ```{r}
 library(multcomp)
-tr = glht(respGLMM,linfct="treatmentA+0.25*v1:treatmentA+0.25*v2:treatmentA+0.25*v3:treatmentA=0")
+tr = glht(respGLMMid,linfct="treatmentA+0.25*v1:treatmentA+0.25*v2:treatmentA+0.25*v3:treatmentA=0")
 summary(tr)
 exp(confint(tr)$confint)
 ```

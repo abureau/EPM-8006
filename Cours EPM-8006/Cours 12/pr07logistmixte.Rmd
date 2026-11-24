@@ -1,6 +1,8 @@
 ---
 title: "Modèle logistique mixte pour essai de crème anti-infectieuse"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Lecture des données
@@ -9,7 +11,7 @@ infection = read.table("infection.txt",header=TRUE)
 ```
 Alternative pour ouvrir une fenêtre pour choisir le fichier
 ```{r}
-infection = read.table(file.choose(),header=TRUE)
+#infection = read.table(file.choose(),header=TRUE)
 ```
 
 # Modèle logistique avec effet aléatoire pour la clinique seulement
