@@ -45,12 +45,20 @@ library(lme4)
 melaLMER.UVB = lmer(RR~UVB + (1|region)+(UVB|nation),data=mmec)
 summary(melaLMER.UVB)
 ```
+
+## Intervalles de confiance pour les paramètres de variance
 ```{r}
 IC.UVB = confint(melaLMER.UVB,parm="theta_")
 IC.UVB
 ```
 ```{r}
 IC.UVB[-3,]^2
+```
+## Intervalles de confiance pour les effets fixes
+
+Ce sont des intervalles de confiance basés sur le modèle. Les estimations empiriques de variance ne sont pas disponibles pour *lme* et *lmer*.
+```{r}
+confint(melaLMER.UVB,parm="beta_",method="Wald")
 ```
 
 Pour tester l'hypothèse nulle que la pente des UVB ne varie pas d'un pays à l'autre, on estime un modèle sans l'effet aléatoire sur la pente des UVB et on fait un test du rapport de vraisemblance. Comme on compare des modèles qui ne diffèrent que dans le modèle de variance-covariance, il est approprié de les comparer selon le critère du MVR. Il faut alors spécifier l'option *refit=F* car par défaut *anova* réestime les modèles par MV standard.
@@ -108,10 +116,9 @@ G[93:96,93:96]
 
 Extraction des résidus bruts et des valeurs prédites
 ```{r}
-pred = fitted(melaLMER.UVB)
-# 2 façons d'obtenir les résidus bruts: soit en soustrayant les valeurs prédites de la réponse, soit avec la fonction *resid*.
-#resid.bruts0 = mmec$RR - pred
-resid.bruts = resid(melaLMER.UVB, type="response")
+pred = predict(melaLMER.UVB, re.form = NA)
+# obtenir les résidus bruts en soustrayant les valeurs prédites de la réponse.
+resid.bruts = mmec$RR - pred
 ```
 
 Boucle sur les individus pour calculer la réponse transformée, les résidus transformés et les valeurs prédites transformées
@@ -133,3 +140,7 @@ for (i in idx) {
 plot(predt,scaledresid)
 abline(h=0)
 ```
+```{r}
+cbind(mmec$nation,mmec$region,mmec$county,mmec$RR,pred,scaleddep,predt,resid.bruts,scaledresid)[1:10,]
+```
+
