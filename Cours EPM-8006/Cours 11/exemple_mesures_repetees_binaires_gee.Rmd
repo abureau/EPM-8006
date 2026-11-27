@@ -63,7 +63,7 @@ On peut aussi programmer les tests des combinaisons linéaire correspondant aux 
 library(doBy);
 tr = esticon(respGEE, L = c(0,0,0,0,1,0,0,0,0,0.25,0.25,0.25))
 tr
-exp(tr[1,1])
+exp(tr[1,c(1,7,8)])
 ```
 
 ```{r}
@@ -78,9 +78,10 @@ plot(resp$baseline, rPearson,ylab="Résidus de Pearson")
 abline(h=0)
 lines(lowess(resp$baseline,rPearson))
 ```
+
 ## Données influentes
 
-Voici la fonction proposée par ChatGPT (2025) et corriée par Claude Sonnet 5.5 et moi pour calculer des dfbetas pour un modèle GEE. Elle est basée sur la fonction *geeglm* du package *geepack*. La fonction calcule les dfbetas pour chaque observation en retirant l'observation et en refittant le modèle.
+Voici la fonction proposée par ChatGPT (2025) et corrigée par Claude Sonnet 5.5 et moi pour calculer des dfbetas pour un modèle GEE. Elle est basée sur la fonction *geeglm* du package *geepack*. La fonction calcule les dfbetas pour chaque observation en retirant l'observation et en réestimant le modèle.
 ```{r}
 # Fonction pour calculer les dfbetas
 dfbetas_geeglm <- function(model, data,corstr) {
@@ -127,7 +128,7 @@ dfbetas_geeglm <- function(model, data,corstr) {
 }
 ```
 
-Appel de la fonction qui échoue.
+Appel de la fonction.
 ```{r}
 # Calcul des dfbetas
 dfb <- dfbetas_geeglm(respGEE, resp,corstr="ar1")
@@ -135,7 +136,6 @@ dfb <- dfbetas_geeglm(respGEE, resp,corstr="ar1")
 
 Exemple d'affichage des dfbetas pour la variable traitement.
 ```{r}
-dfb = dfbeta_mat
 plot(1:nrow(dfb),dfb[,"treatmentA"])
 ```
 
@@ -146,3 +146,12 @@ library(geepack)
 respGEE.log = geeglm(dichot~factor(visit)*treatment+sex+age+baseline+center,id=id, corstr = "ar1",data=resp,family=poisson(link=log),scale.fix=T,waves=visit)
 summary(respGEE.log)
 ```
+```{r}
+joint_tests(respGEE.log)
+```
+```{r}
+tr = esticon(respGEE.log, L = c(0,0,0,0,1,0,0,0,0,0.25,0.25,0.25))
+tr
+exp(c(tr[[1]],tr[[7]],tr[[8]]))
+```
+
